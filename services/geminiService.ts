@@ -20,7 +20,7 @@ const safeParseJSON = (text: string | undefined, fallback: any) => {
 // Mock function to extract text from a "File" (simulated)
 export const extractTextFromFile = async (file: File): Promise<string> => {
   // In a real app, this would use a server or a PDF parsing library.
-  // We will simulate a delay and return mock content based on filename.
+  // We will simulate a SHORT delay (max 1s) to make the total feel snappy (<3s)
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(`
@@ -36,7 +36,7 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
         
         Conclusion. Summary of all topics.
       `);
-    }, 1500);
+    }, 1000); 
   });
 };
 

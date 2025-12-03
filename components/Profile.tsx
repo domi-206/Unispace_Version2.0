@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
 import { User, ProfileViewer } from '../types';
-import { ShieldCheck, Eye, CreditCard, Lock, Settings, Edit3, Save, Copy, Share2, Briefcase, Mail, Globe, Check } from 'lucide-react';
+import { ShieldCheck, Eye, CreditCard, Lock, Settings, Edit3, Save, Copy, Share2, Briefcase, Mail, Globe, Check, Users } from 'lucide-react';
 
 interface ProfileProps {
   user: User;
   viewers: ProfileViewer[];
+  joinedCampusCount: number;
   onSubscribe: () => void;
   onVerify: () => void;
   onUpdateProfile: (data: Partial<User>) => void;
@@ -17,13 +18,14 @@ const INTEREST_TAGS = [
   "Sports", "Gaming", "Reading", "Travel", "Science", "Politics"
 ];
 
-export const Profile: React.FC<ProfileProps> = ({ user, viewers, onSubscribe, onVerify, onUpdateProfile }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCount, onSubscribe, onVerify, onUpdateProfile }) => {
   const [activeTab, setActiveTab] = useState<'VIEW' | 'SETTINGS'>('VIEW');
   const [editBio, setEditBio] = useState(user.bio);
   const [editName, setEditName] = useState(user.name);
   const [editPortfolio, setEditPortfolio] = useState(user.portfolioUrl || '');
   const [editBusinessEmail, setEditBusinessEmail] = useState(user.businessEmail || '');
   const [selectedInterests, setSelectedInterests] = useState<string[]>(user.interests || []);
+  const [hideCampusCount, setHideCampusCount] = useState(user.hideCampusCount || false);
   const [copied, setCopied] = useState(false);
 
   const handleSave = () => {
@@ -32,7 +34,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, onSubscribe, on
       bio: editBio,
       portfolioUrl: editPortfolio,
       businessEmail: editBusinessEmail,
-      interests: selectedInterests
+      interests: selectedInterests,
+      hideCampusCount: hideCampusCount
     });
     setActiveTab('VIEW');
   };
@@ -83,6 +86,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, onSubscribe, on
                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{user.name}</h2>
                    <p className="text-slate-500 dark:text-slate-400 mb-2">{user.role} @ {user.university}</p>
                    <p className="text-slate-600 dark:text-slate-300 text-sm max-w-lg">{user.bio || "No bio yet."}</p>
+                </div>
+
+                {/* Campus Count & Details */}
+                <div className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-300">
+                   {!user.hideCampusCount && (
+                      <div className="flex items-center space-x-2">
+                         <Users size={16} className="text-green-600" />
+                         <span><span className="font-bold text-slate-900 dark:text-white">{joinedCampusCount}</span> Campuses Joined</span>
+                      </div>
+                   )}
                 </div>
 
                 {/* Professional Links */}
@@ -140,6 +153,20 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, onSubscribe, on
                    <div className="relative mt-1">
                       <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <input type="url" value={editPortfolio} onChange={e => setEditPortfolio(e.target.value)} className="w-full pl-10 p-2 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-green-500 focus:border-green-500" placeholder="https://yourwebsite.com" />
+                   </div>
+                </div>
+
+                <div>
+                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Privacy Settings</label>
+                   <div className="flex items-center space-x-3 p-3 border rounded-lg dark:border-slate-600">
+                      <input 
+                        type="checkbox" 
+                        id="hideCampus" 
+                        checked={hideCampusCount} 
+                        onChange={(e) => setHideCampusCount(e.target.checked)}
+                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      />
+                      <label htmlFor="hideCampus" className="text-sm text-slate-700 dark:text-slate-300">Hide number of joined campuses on profile</label>
                    </div>
                 </div>
 

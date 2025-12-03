@@ -22,6 +22,7 @@ export interface User {
   interests?: string[];
   portfolioUrl?: string;
   businessEmail?: string;
+  hideCampusCount?: boolean;
 }
 
 export interface Notification {
@@ -89,6 +90,7 @@ export interface FeedPost {
   authorAvatar: string;
   authorRole: UserRole;
   content: string;
+  imageUrl?: string;
   likes: number;
   comments: number;
   postedAt: string;
@@ -136,12 +138,35 @@ export interface ChatSession {
   messages: ChatMessage[];
 }
 
+// Campus / Institutions Types
+
+export type CampusRole = 'PROFESSOR' | 'COURSE_REP' | 'STUDENT';
+
+export interface CampusMember {
+  userId: string;
+  name: string;
+  avatarUrl: string;
+  role: CampusRole;
+  joinedAt: string;
+}
+
+export interface CampusMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  role: CampusRole;
+  text: string;
+  timestamp: string;
+}
+
 export interface InstitutionGroup {
   id: string;
   name: string;
   description: string;
-  memberCount: number;
   isPrivate: boolean;
   imageUrl: string;
   isJoined?: boolean;
+  members: CampusMember[];
+  messages: CampusMessage[];
 }

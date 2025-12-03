@@ -1,15 +1,26 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { User } from '../types';
 import { Star, ShieldCheck, TrendingUp, Users, Crown } from 'lucide-react';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onLearnMore: () => void;
   featuredUsers: User[];
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, featuredUsers }) => {
-  const ambassadors = featuredUsers.filter(u => u.referralCount >= 10);
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnMore, featuredUsers }) => {
+  // Logic: Filter qualified ambassadors (>=10 referrals), shuffle them, and take 5.
+  // Using useMemo to keep them stable during the session but randomized on reload.
+  const ambassadors = useMemo(() => {
+    const qualified = featuredUsers.filter(u => u.referralCount >= 10);
+    // Fisher-Yates Shuffle
+    for (let i = qualified.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [qualified[i], qualified[j]] = [qualified[j], qualified[i]];
+    }
+    return qualified.slice(0, 5);
+  }, [featuredUsers]);
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -38,7 +49,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, featured
                >
                  Join Unispace Now
                </button>
-               <button className="px-8 py-4 rounded-full font-bold text-lg border border-green-500 text-green-100 hover:bg-green-800/50 transition-colors">
+               <button 
+                 onClick={onLearnMore}
+                 className="px-8 py-4 rounded-full font-bold text-lg border border-green-500 text-green-100 hover:bg-green-800/50 transition-colors"
+               >
                  Learn More
                </button>
             </div>

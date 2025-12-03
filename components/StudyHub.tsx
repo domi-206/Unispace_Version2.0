@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Lock, CheckCircle, Play, ChevronRight, AlertTriangle, RefreshCw, Clock, Brain, MessageSquare, Settings } from 'lucide-react';
+import { Upload, FileText, Lock, CheckCircle, Play, ChevronRight, AlertTriangle, RefreshCw, Clock, Brain, MessageSquare, Settings, Zap } from 'lucide-react';
 import { generateTopicsFromText, generateQuizForTopic, analyzeQuizPerformance, extractTextFromFile, askStudyQuestion } from '../services/geminiService';
 import { QuizQuestion, QuizResult, Topic, QuizConfig } from '../types';
 
@@ -41,11 +41,7 @@ export const StudyHub: React.FC<StudyHubProps> = ({ isVerified, hasAccess, onSha
         setTimeLeft(prev => prev - 1);
       }, 1000);
     } else if (mode === 'QUIZ' && quizConfig.isTimed && timeLeft === 0) {
-      // Time up for this question/quiz? 
-      // If we want per question timer:
-      // handleNextQuestion();
-      // For now, let's treat it as a visual alert or auto-submit if it was global.
-      // Implementing Per Question Logic below in render:
+      // Time up
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -177,29 +173,45 @@ export const StudyHub: React.FC<StudyHubProps> = ({ isVerified, hasAccess, onSha
 
       {/* Upload Section */}
       {topics.length === 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center min-h-[400px] flex flex-col justify-center items-center relative overflow-hidden">
            {isProcessing ? (
-             <div className="animate-pulse flex flex-col items-center">
-               <RefreshCw className="animate-spin text-green-600 mb-4" size={32} />
-               <p className="font-semibold dark:text-white">Analyzing Document & Generating Topics...</p>
+             <div className="flex flex-col items-center z-10">
+               {/* Creative Brain Animation */}
+               <div className="relative w-32 h-32 mb-8">
+                  <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>
+                  <div className="absolute inset-0 border-4 border-green-500/30 rounded-full animate-[spin_3s_linear_infinite]"></div>
+                  <div className="absolute inset-2 border-4 border-green-400/40 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                     <Brain size={48} className="text-green-600 animate-pulse" />
+                  </div>
+                  {/* Scanning ray */}
+                  <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-green-400/0 to-green-400/20 animate-[scan_1.5s_ease-in-out_infinite] border-b-2 border-green-400/50"></div>
+               </div>
+               
+               <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2 animate-pulse">Neural Analysis in Progress</h3>
+               <p className="text-slate-500 text-sm max-w-xs mx-auto">Extracting concepts, generating topics, and building your study path...</p>
              </div>
            ) : (
              <>
-               <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
-                 <Upload size={32} />
+               <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 text-green-600 shadow-lg shadow-green-100 dark:shadow-none transform transition-transform hover:scale-110 duration-300">
+                 <Upload size={36} />
                </div>
-               <h3 className="text-xl font-bold mb-2 dark:text-white">Upload Study Material</h3>
-               <p className="text-slate-500 mb-6">PDF, DOCX, or TXT formats supported.</p>
-               <input 
-                 type="file" 
-                 id="doc-upload" 
-                 className="hidden" 
-                 onChange={handleFileUpload} 
-                 accept=".pdf,.docx,.txt"
-               />
-               <label htmlFor="doc-upload" className="inline-block bg-green-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer hover:bg-green-700 transition-colors shadow-lg shadow-green-200 dark:shadow-none">
-                 Select Document
-               </label>
+               <h3 className="text-2xl font-bold mb-3 dark:text-white">Upload Study Material</h3>
+               <p className="text-slate-500 mb-8 max-w-md mx-auto">Drag & drop your lecture notes or textbooks here. We support PDF, DOCX, and TXT.</p>
+               
+               <div className="relative">
+                  <input 
+                    type="file" 
+                    id="doc-upload" 
+                    className="hidden" 
+                    onChange={handleFileUpload} 
+                    accept=".pdf,.docx,.txt"
+                  />
+                  <label htmlFor="doc-upload" className="inline-flex items-center space-x-2 bg-slate-900 dark:bg-green-600 text-white px-8 py-4 rounded-xl font-bold cursor-pointer hover:bg-slate-800 dark:hover:bg-green-700 transition-all hover:shadow-xl hover:-translate-y-1">
+                    <Zap size={20} className="text-yellow-400" />
+                    <span>Generate Quiz</span>
+                  </label>
+               </div>
              </>
            )}
         </div>
