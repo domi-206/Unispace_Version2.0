@@ -76,14 +76,14 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
           <input 
             type="text" 
             placeholder="Search textbooks, gadgets, services..." 
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-slate-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
           <select 
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
@@ -146,20 +146,38 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
       {isListingModalOpen && (
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-               <h3 className="text-xl font-bold mb-4 dark:text-white">Sell on UniMarket</h3>
+               <h3 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">Sell on UniMarket</h3>
                <form onSubmit={handleCreateListing} className="space-y-4">
                   <div>
                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Product Title</label>
-                     <input required type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full mt-1 p-2 rounded-lg border dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                     <input 
+                        required 
+                        type="text" 
+                        value={newTitle} 
+                        onChange={e => setNewTitle(e.target.value)} 
+                        className="w-full mt-1 p-2 rounded-lg border border-slate-600 bg-slate-900 text-white placeholder:text-slate-400"
+                        placeholder="e.g. Engineering Mathematics"
+                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                      <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Price (₦)</label>
-                        <input required type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} className="w-full mt-1 p-2 rounded-lg border dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                        <input 
+                           required 
+                           type="number" 
+                           value={newPrice} 
+                           onChange={e => setNewPrice(e.target.value)} 
+                           className="w-full mt-1 p-2 rounded-lg border border-slate-600 bg-slate-900 text-white placeholder:text-slate-400"
+                           placeholder="0.00"
+                        />
                      </div>
                      <div>
                         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
-                        <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="w-full mt-1 p-2 rounded-lg border dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                        <select 
+                           value={newCategory} 
+                           onChange={e => setNewCategory(e.target.value)} 
+                           className="w-full mt-1 p-2 rounded-lg border border-slate-600 bg-slate-900 text-white"
+                        >
                            <option>Textbooks</option>
                            <option>Electronics</option>
                            <option>Fashion</option>
@@ -169,19 +187,37 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
                   </div>
                   <div>
                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                     <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} className="w-full mt-1 p-2 rounded-lg border dark:bg-slate-700 dark:border-slate-600 dark:text-white" rows={3} />
+                     <textarea 
+                        required 
+                        value={newDesc} 
+                        onChange={e => setNewDesc(e.target.value)} 
+                        className="w-full mt-1 p-2 rounded-lg border border-slate-600 bg-slate-900 text-white placeholder:text-slate-400" 
+                        rows={3} 
+                        placeholder="Describe condition, pickup location..."
+                     />
                   </div>
                   
                   {/* Duration & Fee */}
                   <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl space-y-3">
                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">Listing Duration</p>
                      <div className="flex space-x-2">
-                        <select value={durationUnit} onChange={e => setDurationUnit(e.target.value as MarketplaceDurationUnit)} className="flex-1 p-2 rounded-lg text-sm border-none dark:bg-slate-700 dark:text-white">
+                        <select 
+                           value={durationUnit} 
+                           onChange={e => setDurationUnit(e.target.value as MarketplaceDurationUnit)} 
+                           className="flex-1 p-2 rounded-lg text-sm border-none bg-slate-900 text-white"
+                        >
                            <option value={MarketplaceDurationUnit.DAYS}>Days</option>
                            <option value={MarketplaceDurationUnit.WEEKS}>Weeks</option>
                            <option value={MarketplaceDurationUnit.MONTHS}>Months</option>
                         </select>
-                        <input type="number" min="1" max="12" value={durationValue} onChange={e => setDurationValue(Number(e.target.value))} className="w-20 p-2 rounded-lg text-sm border-none dark:bg-slate-700 dark:text-white" />
+                        <input 
+                           type="number" 
+                           min="1" 
+                           max="12" 
+                           value={durationValue} 
+                           onChange={e => setDurationValue(Number(e.target.value))} 
+                           className="w-20 p-2 rounded-lg text-sm border-none bg-slate-900 text-white" 
+                        />
                      </div>
                      <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
                         <span className="text-sm text-green-700 dark:text-green-400">Estimated Fee:</span>

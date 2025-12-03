@@ -37,10 +37,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, activeListings, rece
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Wallet Card */}
+        {/* Wallet Card - Green Background */}
         <div 
           onClick={() => onNavigate('wallet')}
-          className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+          className="rounded-2xl p-6 text-white shadow-xl relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+          style={{ backgroundColor: '#07bc0c' }}
         >
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-10 blur-2xl"></div>
           <div className="flex justify-between items-start mb-6">
@@ -49,7 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, activeListings, rece
             </div>
             <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">UniWallet</span>
           </div>
-          <p className="text-indigo-200 text-sm mb-1">Available Balance</p>
+          <p className="text-green-100 text-sm mb-1">Available Balance</p>
           <h3 className="text-3xl font-bold">₦{user.walletBalance.toLocaleString()}</h3>
         </div>
 

@@ -183,11 +183,9 @@ function App() {
     const GUEST_FEE = 2000;
 
     // Check Logic for Guests vs Students
+    // Note: Verification is now handled by the UI Modal in Institutions.tsx 
+    // This function assumes confirmation if Guest.
     if (user.role === UserRole.GUEST) {
-      if (user.walletBalance < GUEST_FEE) {
-        alert(`Insufficient funds. You need ₦${GUEST_FEE} to join a Campus as a Guest.`);
-        return;
-      }
       // Deduct fee for guest
       setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - GUEST_FEE }));
       

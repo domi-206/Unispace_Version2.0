@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { InstitutionGroup, User, CampusRole } from '../types';
-import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle } from 'lucide-react';
+import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle, CreditCard } from 'lucide-react';
 
 interface InstitutionsProps {
   user: User;
@@ -17,6 +17,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [paymentGroup, setPaymentGroup] = useState<InstitutionGroup | null>(null); // For Guest Payment Modal
   
   // Create Form State
   const [newName, setNewName] = useState('');
@@ -52,25 +53,42 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (user.role !== 'STUDENT') {
-      alert("Guest users cannot build a campus.");
-      return;
-    }
+    
+    // Check funds for everyone (Guests and Students both pay to build)
     if (user.walletBalance < CREATE_CAMPUS_FEE) {
       alert(`Insufficient funds. You need ₦${CREATE_CAMPUS_FEE.toLocaleString()} to build a campus.`);
       return;
     }
 
     if (newName && newDesc) {
-      const confirmCreate = window.confirm(`Building a Campus costs ₦${CREATE_CAMPUS_FEE.toLocaleString()}. Do you want to proceed?`);
-      if (confirmCreate) {
-        const imgUrl = newImageFile ? URL.createObjectURL(newImageFile) : previewUrl;
-        onCreate(newName, newDesc, imgUrl);
-        setIsCreateModalOpen(false);
-        setNewName('');
-        setNewDesc('');
-        setNewImageFile(null);
-        setPreviewUrl('https://picsum.photos/200/200');
+      // Logic handled in App.tsx will deduct the fee
+      const imgUrl = newImageFile ? URL.createObjectURL(newImageFile) : previewUrl;
+      onCreate(newName, newDesc, imgUrl);
+      setIsCreateModalOpen(false);
+      setNewName('');
+      setNewDesc('');
+      setNewImageFile(null);
+      setPreviewUrl('https://picsum.photos/200/200');
+    }
+  };
+
+  const handleJoinClick = (group: InstitutionGroup) => {
+    if (user.role === 'GUEST') {
+      // Open Payment Modal for Guests
+      setPaymentGroup(group);
+    } else {
+      // Verified students join immediately (free)
+      onJoin(group.id);
+    }
+  };
+
+  const confirmGuestPayment = () => {
+    if (paymentGroup) {
+      if (user.walletBalance < GUEST_JOIN_FEE) {
+        alert("Insufficient wallet balance for this transaction.");
+      } else {
+        onJoin(paymentGroup.id);
+        setPaymentGroup(null);
       }
     }
   };
@@ -273,20 +291,13 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
 
        <div className="flex justify-between items-center">
           <h3 className="text-xl font-bold dark:text-white">Popular Campuses</h3>
-          {user.role === 'STUDENT' ? (
-            <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 dark:shadow-none"
-            >
-               <Plus size={18} />
-               <span>Build Campus</span>
-            </button>
-          ) : (
-            <div className="flex items-center space-x-2 text-slate-400 text-sm" title="Only verified students can build campuses">
-               <Lock size={16} />
-               <span>Guest Mode</span>
-            </div>
-          )}
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 dark:shadow-none"
+          >
+             <Plus size={18} />
+             <span>Build Campus</span>
+          </button>
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -322,7 +333,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
                      </button>
                    ) : (
                      <button 
-                       onClick={() => onJoin(group.id)}
+                       onClick={() => handleJoinClick(group)}
                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
                          user.role === 'GUEST' 
                            ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
@@ -337,20 +348,77 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
           ))}
        </div>
 
+       {/* Guest Payment Modal */}
+       {paymentGroup && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+               <div className="bg-green-600 p-6 text-white text-center">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <CreditCard size={32} />
+                  </div>
+                  <h3 className="text-xl font-bold">Campus Access Fee</h3>
+               </div>
+               
+               <div className="p-6 space-y-6">
+                  <div className="text-center">
+                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">You are about to join:</p>
+                     <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-4">{paymentGroup.name}</h4>
+                     
+                     <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600">
+                        <div className="flex justify-between items-center text-sm mb-2">
+                           <span className="text-slate-500 dark:text-slate-400">Entry Fee:</span>
+                           <span className="font-bold text-slate-800 dark:text-white">₦{GUEST_JOIN_FEE.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm border-t border-slate-200 dark:border-slate-600 pt-2">
+                           <span className="text-slate-500 dark:text-slate-400">Your Wallet:</span>
+                           <span className={`font-bold ${user.walletBalance >= GUEST_JOIN_FEE ? 'text-green-600' : 'text-red-500'}`}>
+                              ₦{user.walletBalance.toLocaleString()}
+                           </span>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                     <button 
+                       onClick={confirmGuestPayment}
+                       className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 dark:shadow-none transition-colors"
+                     >
+                        Pay & Join
+                     </button>
+                     <button 
+                       onClick={() => setPaymentGroup(null)}
+                       className="w-full py-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-semibold transition-colors"
+                     >
+                        Cancel
+                     </button>
+                  </div>
+               </div>
+            </div>
+         </div>
+       )}
+
        {/* Create Modal */}
        {isCreateModalOpen && (
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
                <div className="bg-green-600 p-6 text-white">
                   <h3 className="text-xl font-bold">Build a New Campus</h3>
-                  <p className="text-green-100 text-sm">Create a community for your department or interest.</p>
+                  <p className="text-green-100 text-sm">Become a Professor and lead your community.</p>
                </div>
                
-               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 border-b border-yellow-100 dark:border-yellow-800 flex items-start space-x-3">
-                  <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                     A fee of <strong>₦{CREATE_CAMPUS_FEE.toLocaleString()}</strong> will be deducted from your UniWallet to build this campus.
-                  </p>
+               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 border-b border-yellow-100 dark:border-yellow-800">
+                  <div className="flex items-start space-x-3 mb-2">
+                     <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        A fee of <strong>₦{CREATE_CAMPUS_FEE.toLocaleString()}</strong> will be deducted from your UniWallet to build this campus.
+                     </p>
+                  </div>
+                  <div className="flex justify-between text-xs border-t border-yellow-200 dark:border-yellow-800 pt-2 mt-2">
+                     <span className="text-yellow-800 dark:text-yellow-200">Your Balance:</span>
+                     <span className={`font-bold ${user.walletBalance < CREATE_CAMPUS_FEE ? "text-red-500" : "text-green-700 dark:text-green-400"}`}>
+                        ₦{user.walletBalance.toLocaleString()}
+                     </span>
+                  </div>
                </div>
 
                <form onSubmit={handleCreate} className="p-6 space-y-4">
@@ -379,7 +447,12 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
                   </div>
                   <div className="flex space-x-3 mt-6">
                      <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
-                     <button type="submit" className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md">Pay & Build</button>
+                     <button 
+                       type="submit" 
+                       className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md flex justify-center items-center space-x-2"
+                     >
+                       <span>Pay & Build</span>
+                     </button>
                   </div>
                </form>
             </div>
