@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { InstitutionGroup, User, CampusRole } from '../types';
-import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle, CreditCard } from 'lucide-react';
+import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle, CreditCard, Clock } from 'lucide-react';
 
 interface InstitutionsProps {
   user: User;
@@ -36,6 +36,9 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
   const GUEST_JOIN_FEE = 2000;
   const CREATE_CAMPUS_FEE = 5000;
 
+  // Filter out pending groups from general view unless user is creator/member
+  const visibleGroups = groups.filter(g => g.status === 'ACTIVE' || g.isJoined);
+
   // Auto-scroll chat
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -69,6 +72,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
       setNewDesc('');
       setNewImageFile(null);
       setPreviewUrl('https://picsum.photos/200/200');
+      alert("Campus created! It is now PENDING verification.");
     }
   };
 
@@ -126,6 +130,21 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
 
   // -- RENDER: ACTIVE CAMPUS CHAT VIEW --
   if (activeGroup) {
+    if (activeGroup.status === 'PENDING') {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 text-center p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="bg-orange-100 p-4 rounded-full mb-4">
+            <Clock size={48} className="text-orange-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Campus Pending Verification</h2>
+          <p className="text-slate-500 max-w-md mt-2">
+            "{activeGroup.name}" is currently under review by our safety team to ensure it meets our community standards.
+          </p>
+          <button onClick={() => setActiveGroupId(null)} className="mt-6 text-slate-500 hover:text-slate-800 dark:hover:text-white">Back to List</button>
+        </div>
+      );
+    }
+
     return (
       <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Chat Area */}
@@ -301,9 +320,14 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groups.map(group => (
-             <div key={group.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow flex flex-col group-card">
-                <div className="flex justify-between items-start mb-4">
+          {visibleGroups.map(group => (
+             <div key={group.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow flex flex-col group-card relative overflow-hidden">
+                {group.status === 'PENDING' && (
+                  <div className="absolute top-0 left-0 right-0 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300 text-xs font-bold text-center py-1">
+                    PENDING VERIFICATION
+                  </div>
+                )}
+                <div className="flex justify-between items-start mb-4 mt-2">
                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden">
                       <img src={group.imageUrl} alt={group.name} className="w-full h-full object-cover" />
                    </div>
@@ -334,10 +358,13 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
                    ) : (
                      <button 
                        onClick={() => handleJoinClick(group)}
+                       disabled={group.status === 'PENDING'}
                        className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
-                         user.role === 'GUEST' 
-                           ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
-                           : 'bg-green-600 text-white hover:bg-green-700'
+                         group.status === 'PENDING'
+                           ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                           : user.role === 'GUEST' 
+                             ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
+                             : 'bg-green-600 text-white hover:bg-green-700'
                        }`}
                      >
                        {user.role === 'GUEST' ? `Join (₦${GUEST_JOIN_FEE.toLocaleString()})` : 'Join (Free)'}
@@ -410,7 +437,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
                   <div className="flex items-start space-x-3 mb-2">
                      <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        A fee of <strong>₦{CREATE_CAMPUS_FEE.toLocaleString()}</strong> will be deducted from your UniWallet to build this campus.
+                        A fee of <strong>₦{CREATE_CAMPUS_FEE.toLocaleString()}</strong> will be deducted. Your campus will be <strong>Pending Verification</strong> before going live.
                      </p>
                   </div>
                   <div className="flex justify-between text-xs border-t border-yellow-200 dark:border-yellow-800 pt-2 mt-2">
@@ -428,7 +455,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
                   </div>
                   <div>
                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                     <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What is this group for?" className="w-full mt-1 p-2 rounded-lg border border-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white" rows={3} />
+                     <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What is this group for? No harmful/occult content." className="w-full mt-1 p-2 rounded-lg border border-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white" rows={3} />
                   </div>
                   <div>
                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cover Image</label>

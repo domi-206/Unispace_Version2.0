@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { NIGERIAN_UNIVERSITIES } from '../data/universities';
 import { UserRole } from '../types';
-import { Upload, ChevronRight, CheckCircle2, Facebook } from 'lucide-react';
+import { Upload, ChevronRight, CheckCircle2, Facebook, ShieldAlert } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (userData: any) => void;
@@ -33,7 +33,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateToLanding, onView
           role,
           university: role === UserRole.STUDENT ? 'University of Lagos' : 'N/A',
           verified: role === UserRole.STUDENT, // Mock verification for student demo
-          joinedAt: new Date(Date.now() - 86400000).toISOString()
+          joinedAt: new Date(Date.now() - 86400000).toISOString(),
+          reportsCount: 0,
+          isBanned: false,
+          blockedUsers: []
         });
       } else {
         setError('Please enter email and password');
@@ -55,7 +58,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateToLanding, onView
           role,
           university: role === UserRole.STUDENT ? university : 'N/A',
           verified: role === UserRole.GUEST, // Guests auto-verified as users, Students need check
-          joinedAt: new Date().toISOString()
+          joinedAt: new Date().toISOString(),
+          reportsCount: 0,
+          isBanned: false,
+          blockedUsers: []
         });
       } else {
         setError('Please fill all fields');
@@ -72,7 +78,10 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateToLanding, onView
       university: 'N/A',
       verified: false,
       joinedAt: new Date().toISOString(),
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`
+      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`,
+      reportsCount: 0,
+      isBanned: false,
+      blockedUsers: []
     });
   };
 
@@ -259,17 +268,27 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateToLanding, onView
                </div>
 
                {!isLogin && (
-                  <div className="flex items-center space-x-2">
-                     <input
-                        id="terms"
-                        type="checkbox"
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                        className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-500"
-                     />
-                     <label htmlFor="terms" className={`text-sm ${isGuest ? 'text-green-200' : 'text-slate-600'}`}>
-                        I agree to the <button type="button" onClick={onViewTerms} className="font-bold hover:underline">Terms of Service</button>
-                     </label>
+                  <div className="space-y-3">
+                     <div className={`p-3 rounded-lg text-xs leading-relaxed ${isGuest ? 'bg-red-900/30 text-red-200' : 'bg-red-50 text-red-700'}`}>
+                        <div className="flex items-center font-bold mb-1"><ShieldAlert size={14} className="mr-1"/> Community Covenant</div>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                           <li>No Drugs, Cybercrime, or Occultism.</li>
+                           <li>No Sexual Abuse or Harassment.</li>
+                           <li>No Hate Speech or Harmful content.</li>
+                        </ul>
+                     </div>
+                     <div className="flex items-center space-x-2">
+                        <input
+                           id="terms"
+                           type="checkbox"
+                           checked={agreedToTerms}
+                           onChange={(e) => setAgreedToTerms(e.target.checked)}
+                           className="w-4 h-4 text-green-600 border-slate-300 rounded focus:ring-green-500"
+                        />
+                        <label htmlFor="terms" className={`text-sm ${isGuest ? 'text-green-200' : 'text-slate-600'}`}>
+                           I agree to the <button type="button" onClick={onViewTerms} className="font-bold hover:underline">Terms of Service</button>
+                        </label>
+                     </div>
                   </div>
                )}
 

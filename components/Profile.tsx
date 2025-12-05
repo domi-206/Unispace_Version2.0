@@ -1,15 +1,19 @@
 
 import React, { useState } from 'react';
 import { User, ProfileViewer } from '../types';
-import { ShieldCheck, Eye, CreditCard, Lock, Settings, Edit3, Save, Copy, Share2, Briefcase, Mail, Globe, Check, Users } from 'lucide-react';
+import { ShieldCheck, Eye, Lock, Settings, Save, Copy, Share2, Mail, Globe, Users, Flag, Ban } from 'lucide-react';
+import { ReportModal } from './ReportModal';
 
 interface ProfileProps {
   user: User;
+  currentUser?: User; // To check if viewing self or other
   viewers: ProfileViewer[];
   joinedCampusCount: number;
   onSubscribe: () => void;
   onVerify: () => void;
   onUpdateProfile: (data: Partial<User>) => void;
+  onReportUser?: (userId: string, reason: string) => void;
+  onBlockUser?: (userId: string) => void;
 }
 
 const INTEREST_TAGS = [
@@ -18,7 +22,7 @@ const INTEREST_TAGS = [
   "Sports", "Gaming", "Reading", "Travel", "Science", "Politics"
 ];
 
-export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCount, onSubscribe, onVerify, onUpdateProfile }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, currentUser, viewers, joinedCampusCount, onSubscribe, onVerify, onUpdateProfile, onReportUser, onBlockUser }) => {
   const [activeTab, setActiveTab] = useState<'VIEW' | 'SETTINGS'>('VIEW');
   const [editBio, setEditBio] = useState(user.bio);
   const [editName, setEditName] = useState(user.name);
@@ -27,6 +31,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCou
   const [selectedInterests, setSelectedInterests] = useState<string[]>(user.interests || []);
   const [hideCampusCount, setHideCampusCount] = useState(user.hideCampusCount || false);
   const [copied, setCopied] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // If currentUser is not passed, assume user is viewing their own profile
+  const isOwnProfile = !currentUser || currentUser.id === user.id;
 
   const handleSave = () => {
     onUpdateProfile({ 
@@ -59,13 +67,33 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCou
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden relative">
         <div className="h-32 bg-gradient-to-r from-green-600 to-emerald-600">
-           <div className="absolute top-4 right-4">
-              <button 
-                onClick={() => setActiveTab(activeTab === 'VIEW' ? 'SETTINGS' : 'VIEW')}
-                className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
-              >
-                 <Settings size={20} />
-              </button>
+           <div className="absolute top-4 right-4 flex space-x-2">
+              {!isOwnProfile && onReportUser && onBlockUser && (
+                <>
+                  <button 
+                    onClick={() => onBlockUser(user.id)}
+                    className="bg-white/20 hover:bg-red-500/80 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
+                    title="Block User"
+                  >
+                     <Ban size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setShowReportModal(true)}
+                    className="bg-white/20 hover:bg-orange-500/80 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
+                    title="Report User"
+                  >
+                     <Flag size={20} />
+                  </button>
+                </>
+              )}
+              {isOwnProfile && (
+                <button 
+                  onClick={() => setActiveTab(activeTab === 'VIEW' ? 'SETTINGS' : 'VIEW')}
+                  className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg backdrop-blur-sm transition-colors"
+                >
+                   <Settings size={20} />
+                </button>
+              )}
            </div>
         </div>
         <div className="px-8 pb-8">
@@ -202,7 +230,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCou
         </div>
       </div>
 
-      {activeTab === 'VIEW' && (
+      {isOwnProfile && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div className="md:col-span-2 space-y-6">
               {/* Profile Views */}
@@ -214,37 +242,50 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCou
                     </h3>
                  </div>
                  <div className="space-y-4">
-                    {viewers.map((viewer) => (
-                       <div key={viewer.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                          <div className="flex items-center space-x-3">
-                             {user.isPremium ? (
-                                <img src={viewer.avatarUrl} className="w-10 h-10 rounded-full object-cover" alt="Viewer" />
-                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-600 blur-sm"></div>
-                             )}
-                             <div>
-                                {user.isPremium ? (
-                                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{viewer.name}</p>
-                                ) : (
-                                   <div className="h-4 w-24 bg-slate-200 dark:bg-slate-600 rounded blur-sm mb-1"></div>
-                                )}
-                                <p className="text-xs text-slate-500">{new Date(viewer.viewedAt).toLocaleDateString()}</p>
-                             </div>
-                          </div>
-                          {!user.isPremium && <Lock size={16} className="text-slate-400" />}
-                       </div>
-                    ))}
-                    {viewers.length === 0 && (
-                       <div className="text-center text-slate-400 py-4 text-sm">No recent profile views.</div>
+                    {/* Blurred / Hidden Content if NOT Premium */}
+                    {!user.isPremium ? (
+                        <>
+                           {[1, 2, 3].map((i) => (
+                              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 filter blur-[2px] opacity-60">
+                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-full bg-slate-300"></div>
+                                    <div className="space-y-2">
+                                       <div className="h-3 w-32 bg-slate-300 rounded"></div>
+                                       <div className="h-2 w-20 bg-slate-200 rounded"></div>
+                                    </div>
+                                 </div>
+                                 <Lock size={16} className="text-slate-400" />
+                              </div>
+                           ))}
+                           <div className="mt-6 bg-slate-900 dark:bg-slate-950 rounded-xl p-6 text-white text-center relative overflow-hidden">
+                              <div className="absolute inset-0 bg-green-600/10"></div>
+                              <h4 className="font-bold mb-2 relative z-10">Pay to Unlock Visitors</h4>
+                              <p className="text-sm text-slate-300 mb-4 relative z-10">See exactly who is checking out your profile.</p>
+                              <button onClick={onSubscribe} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-500 transition-colors relative z-10 shadow-lg shadow-green-900/50">
+                                Subscribe Now
+                              </button>
+                           </div>
+                        </>
+                    ) : (
+                        /* Visible Content if Premium */
+                        <>
+                           {viewers.map((viewer) => (
+                              <div key={viewer.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                 <div className="flex items-center space-x-3">
+                                    <img src={viewer.avatarUrl} className="w-10 h-10 rounded-full object-cover" alt="Viewer" />
+                                    <div>
+                                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{viewer.name}</p>
+                                       <p className="text-xs text-slate-500">{new Date(viewer.viewedAt).toLocaleDateString()}</p>
+                                    </div>
+                                 </div>
+                              </div>
+                           ))}
+                           {viewers.length === 0 && (
+                              <div className="text-center text-slate-400 py-4 text-sm">No recent profile views.</div>
+                           )}
+                        </>
                     )}
                  </div>
-                 {!user.isPremium && viewers.length > 0 && (
-                    <div className="mt-6 bg-green-900 rounded-xl p-6 text-white text-center">
-                       <h4 className="font-bold mb-2">Unlock Profile Visitors</h4>
-                       <p className="text-sm text-green-100 mb-4">See exactly who is checking out your profile.</p>
-                       <button onClick={onSubscribe} className="bg-white text-green-900 font-bold py-2 px-6 rounded-lg hover:bg-green-50 transition-colors">Subscribe</button>
-                    </div>
-                 )}
               </div>
            </div>
 
@@ -283,6 +324,17 @@ export const Profile: React.FC<ProfileProps> = ({ user, viewers, joinedCampusCou
               </div>
            </div>
         </div>
+      )}
+
+      {showReportModal && onReportUser && (
+        <ReportModal 
+          reportedUserName={user.name} 
+          onClose={() => setShowReportModal(false)}
+          onSubmit={(reason) => {
+            onReportUser(user.id, reason);
+            setShowReportModal(false);
+          }}
+        />
       )}
     </div>
   );

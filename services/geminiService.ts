@@ -1,8 +1,20 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizQuestion, QuizResult, Topic } from "../types";
+import { QuizQuestion, QuizResult, Topic, AIAnalysisResult, Flashcard } from "../types";
 
-const apiKey = process.env.API_KEY || '';
+// Safety check for process.env to prevent runtime crashes in browser environments
+const getApiKey = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env.API_KEY || '';
+    }
+  } catch (e) {
+    console.warn("Unable to access process.env");
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
 
 // Helper to safely parse JSON from AI response
 const safeParseJSON = (text: string | undefined, fallback: any) => {
@@ -19,30 +31,32 @@ const safeParseJSON = (text: string | undefined, fallback: any) => {
 
 // Mock function to extract text from a "File" (simulated)
 export const extractTextFromFile = async (file: File): Promise<string> => {
-  // In a real app, this would use a server or a PDF parsing library.
-  // We will simulate a SHORT delay (max 1s) to make the total feel snappy (<3s)
+  // Faster processing (<3s requirement)
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(`
-        Course Material: ${file.name}
+        [DOCUMENT CONTENT for ${file.name}]
         
-        Introduction to the subject. Basic concepts include definitions, history, and scope.
+        Unit 1: Introduction to Computer Science
+        Computer Science is the study of computation, automation, and information.
+        Key Concept: Algorithms are step-by-step procedures for calculations.
         
-        Chapter 1: Fundamentals. Key principles are A, B, and C. It is important to understand the underlying theory.
+        Unit 2: Data Structures
+        Arrays are linear data structures. Linked lists consist of nodes.
+        Queues follow FIFO (First In First Out). Stacks follow LIFO (Last In First Out).
         
-        Chapter 2: Advanced Applications. Application of principles in real world scenarios. Case studies involved.
+        Unit 3: Web Technologies
+        HTML stands for HyperText Markup Language. CSS is Cascading Style Sheets.
+        React is a JavaScript library for building user interfaces.
         
-        Chapter 3: Critical Analysis. Comparing different frameworks and their efficacy.
-        
-        Conclusion. Summary of all topics.
+        [END CONTENT]
       `);
-    }, 1000); 
+    }, 100); // Reduced delay for snappy feel
   });
 };
 
 export const generateTopicsFromText = async (text: string): Promise<Topic[]> => {
   if (!apiKey) {
-    // Fallback
     return [
       { id: 't1', title: 'Introduction & Basics', description: 'Core concepts and definitions.', isLocked: false, isCompleted: false },
       { id: 't2', title: 'Intermediate Concepts', description: 'Applying the basics.', isLocked: true, isCompleted: false },
@@ -51,20 +65,9 @@ export const generateTopicsFromText = async (text: string): Promise<Topic[]> => 
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  // Updated prompt to enforce brevity and prevent infinite loops
   const prompt = `
-    Analyze the following study text and break it down into 3-5 distinct learning topics.
-    
-    CRITICAL: 
-    - Return ONLY a JSON array.
-    - Keep "description" VERY CONCISE (max 15 words).
-    - Do NOT repeat text.
-    
-    Structure:
-    [
-      { "id": "unique_id", "title": "Topic Title", "description": "Short summary (max 15 words)." }
-    ]
+    Analyze the text and list 3-5 key study topics.
+    JSON ONLY. Max 15 words description.
     
     Text: "${text.substring(0, 4000)}"
   `;
@@ -93,31 +96,23 @@ export const generateTopicsFromText = async (text: string): Promise<Topic[]> => 
     return data.map((t: any, index: number) => ({
       ...t,
       id: t.id || `topic-${index}`,
-      isLocked: index !== 0, // Lock all except first
+      isLocked: index !== 0,
       isCompleted: false
     }));
   } catch (error) {
     console.error("Error generating topics:", error);
-    return [
-      { id: 'err1', title: 'General Overview', description: 'Generated due to connection error.', isLocked: false, isCompleted: false }
-    ];
+    return [];
   }
 };
 
 export const generateQuizForTopic = async (topicTitle: string, context: string, numQuestions: number): Promise<QuizQuestion[]> => {
-  if (!apiKey) throw new Error("API Key missing");
+  if (!apiKey) return [];
 
   const ai = new GoogleGenAI({ apiKey });
   const prompt = `
-    Generate a ${numQuestions}-question multiple choice quiz about: "${topicTitle}".
-    Use the provided context.
-    
-    CRITICAL: 
-    - Return valid JSON array.
-    - Options must be an array of 4 strings.
-    - correctAnswer is index 0-3.
-    
-    Context: "${context.substring(0, 3000)}"
+    Generate ${numQuestions} multiple choice questions about "${topicTitle}".
+    Based on context: "${context.substring(0, 3000)}"
+    JSON Array format.
   `;
 
   try {
@@ -143,7 +138,6 @@ export const generateQuizForTopic = async (topicTitle: string, context: string, 
     });
     return safeParseJSON(response.text, []);
   } catch (e) {
-    console.error(e);
     return [];
   }
 };
@@ -153,23 +147,89 @@ export const analyzeQuizPerformance = async (questions: QuizQuestion[], userAnsw
 
   const ai = new GoogleGenAI({ apiKey });
   let score = 0;
-  
-  questions.forEach((q, idx) => {
-    if (userAnswers[idx] === q.correctAnswer) score++;
-  });
-
-  const percentage = (score / questions.length) * 100;
-  const passed = percentage >= 70;
+  questions.forEach((q, idx) => { if (userAnswers[idx] === q.correctAnswer) score++; });
+  const passed = (score / questions.length) * 100 >= 70;
 
   const prompt = `
-    Analyze this quiz performance.
-    Questions: ${JSON.stringify(questions.map(q => q.question).slice(0, 10))}
+    Analyze quiz performance.
+    Questions: ${JSON.stringify(questions.map(q => q.question).slice(0, 5))}
     Score: ${score}/${questions.length}
+    Return JSON: strengths, weaknesses, keyTerms (strings).
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+    const data = safeParseJSON(response.text, {});
+    return {
+      score,
+      total: questions.length,
+      passed,
+      strengths: data.strengths || [],
+      weaknesses: data.weaknesses || [],
+      keyTerms: data.keyTerms || []
+    };
+  } catch (e) {
+    return { score, total: questions.length, passed, strengths: [], weaknesses: [], keyTerms: [] };
+  }
+}
+
+export const askStudyQuestion = async (context: string, question: string): Promise<string> => {
+  if (!apiKey) return "AI Service Unavailable (Missing API Key)";
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = `Context: "${context.substring(0,4000)}"\nQuestion: "${question}"\nAnswer simply.`;
+  const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt });
+  return response.text || "No answer found.";
+};
+
+// --- AI ENGINE FEATURES (STRICT PYTHON LOGIC ADAPTATION) ---
+
+export const analyzeCourseMaterial = async (courseText: string, pastQuestionsText: string): Promise<AIAnalysisResult> => {
+  if (!apiKey) throw new Error("API Key missing");
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // LOGIC ADAPTED FROM PYTHON SCRIPT:
+  // 1. Analyze "raw text" from past questions (extract specific academic questions, ignore instructions).
+  // 2. Act as "Expert Tutor" using "Course Material" as Context.
+  // 3. Strict Rules: Answer based on Context, or say "Not covered". Provide detailed explanation.
+  
+  const prompt = `
+    ACT AS THE "INTELLIGENT EXAM SOLVER".
     
-    Return JSON with 3 items each:
-    - strengths: string[]
-    - weaknesses: string[]
-    - keyTerms: string[]
+    STEP 1: EXAM PARSING
+    Analyze the "PAST QUESTIONS" text. Extract every specific academic question asked.
+    Ignore instructions like "Time allowed", "Answer all questions".
+    Deduplicate the questions.
+    
+    STEP 2: EXPERT TUTOR SOLVING
+    For each extracted question, use the "COURSE MATERIAL" as the Context to provide an answer.
+    
+    RULES:
+    1. Your answer must be strictly based on the "COURSE MATERIAL" provided.
+    2. If the answer is not found in the Context, state "This topic is not covered in the provided Course Material."
+    3. Provide a detailed explanation for the answer.
+    
+    COURSE MATERIAL (CONTEXT):
+    "${courseText.substring(0, 80000)}"
+    
+    PAST QUESTIONS (RAW TEXT):
+    "${pastQuestionsText.substring(0, 20000)}"
+    
+    OUTPUT FORMAT (JSON):
+    {
+      "pastQuestionAnswers": [
+        {
+          "question": "Extracted Question 1",
+          "answer": "Detailed Answer based on context...",
+          "topicRef": "Relevant Section Header"
+        }
+      ],
+      "summary": []
+    }
   `;
 
   try {
@@ -181,40 +241,112 @@ export const analyzeQuizPerformance = async (questions: QuizQuestion[], userAnsw
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-            weaknesses: { type: Type.ARRAY, items: { type: Type.STRING } },
-            keyTerms: { type: Type.ARRAY, items: { type: Type.STRING } }
+            summary: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  topic: { type: Type.STRING },
+                  points: { type: Type.ARRAY, items: { type: Type.STRING } }
+                }
+              }
+            },
+            pastQuestionAnswers: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  question: { type: Type.STRING },
+                  answer: { type: Type.STRING },
+                  year: { type: Type.STRING },
+                  explanation: { type: Type.STRING },
+                  topicRef: { type: Type.STRING }
+                }
+              }
+            },
+            faqs: { type: Type.ARRAY, items: { type: Type.STRING } },
+            predictions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  question: { type: Type.STRING },
+                  likelihood: { type: Type.STRING },
+                  reasoning: { type: Type.STRING }
+                }
+              }
+            },
+            topicExplanations: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  topic: { type: Type.STRING },
+                  explanation: { type: Type.STRING }
+                }
+              }
+            }
           }
         }
       }
     });
 
-    const analysis = safeParseJSON(response.text, {});
-    return {
-      score,
-      total: questions.length,
-      passed,
-      strengths: analysis.strengths || ["General Knowledge"],
-      weaknesses: analysis.weaknesses || ["Specific Details"],
-      keyTerms: analysis.keyTerms || ["Review All"]
-    };
-
-  } catch (error) {
-    return {
-      score,
-      total: questions.length,
-      passed,
-      strengths: ["N/A"],
-      weaknesses: ["N/A"],
-      keyTerms: ["N/A"]
-    };
+    return safeParseJSON(response.text, {
+      summary: [],
+      pastQuestionAnswers: [],
+      faqs: [],
+      predictions: [],
+      topicExplanations: []
+    });
+  } catch (e) {
+    console.error(e);
+    throw e;
   }
-}
+};
 
-export const askStudyQuestion = async (context: string, question: string): Promise<string> => {
-  if (!apiKey) return "API Key missing.";
+export const generateFlashcards = async (text: string): Promise<Flashcard[]> => {
+  if (!apiKey) throw new Error("API Key missing");
+
   const ai = new GoogleGenAI({ apiKey });
-  const prompt = `Context: "${context.substring(0,4000)}"\nQuestion: "${question}"\nAnswer concisely (max 50 words).`;
-  const response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt });
-  return response.text || "No answer found.";
+  
+  // STRICT Q: and A: format for flashcards
+  const prompt = `
+    Generate study flashcards from the provided text.
+    
+    INSTRUCTIONS:
+    1. Identify key questions or terms in the text (especially from Past Questions sections).
+    2. Create concise, memory-friendly answers.
+    3. IMPORTANT: The 'term' field must start with 'Q: ' and the 'definition' field must start with 'A: '.
+    
+    EXAMPLE:
+    term: "Q: What is SMP?"
+    definition: "A: Symmetric Multiprocessing."
+    
+    TEXT CONTENT:
+    "${text.substring(0, 50000)}"
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              term: { type: Type.STRING },
+              definition: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+
+    return safeParseJSON(response.text, []);
+  } catch (e) {
+    return [];
+  }
 };

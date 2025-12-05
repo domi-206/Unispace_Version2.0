@@ -23,6 +23,10 @@ export interface User {
   portfolioUrl?: string;
   businessEmail?: string;
   hideCampusCount?: boolean;
+  // Safety & Moderation
+  reportsCount: number;
+  isBanned: boolean;
+  blockedUsers: string[]; // List of IDs
 }
 
 export interface Notification {
@@ -31,7 +35,7 @@ export interface Notification {
   message: string;
   time: string;
   read: boolean;
-  type: 'INFO' | 'SUCCESS' | 'WARNING';
+  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 }
 
 export interface WalletTransaction {
@@ -55,6 +59,8 @@ export interface Product {
   imageUrl: string;
   postedAt: string;
   expiresAt: string;
+  digitalFileUrl?: string; // URL for PDF/Digital items
+  purchasers: string[]; // List of User IDs who bought this
 }
 
 export interface QuizQuestion {
@@ -169,4 +175,39 @@ export interface InstitutionGroup {
   isJoined?: boolean;
   members: CampusMember[];
   messages: CampusMessage[];
+  status: 'ACTIVE' | 'PENDING'; // Verification status
+}
+
+// AI Engine Types
+
+export interface PastQuestionAnswer {
+  question: string;
+  answer: string;
+  year?: string;
+  explanation: string;
+  topicRef: string;
+}
+
+export interface Prediction {
+  question: string;
+  likelihood: 'Most Likely' | 'Likely' | 'Possible';
+  reasoning: string;
+}
+
+export interface TopicExplanation {
+  topic: string;
+  explanation: string;
+}
+
+export interface AIAnalysisResult {
+  summary: { topic: string; points: string[] }[];
+  pastQuestionAnswers: PastQuestionAnswer[];
+  faqs: string[];
+  predictions: Prediction[];
+  topicExplanations: TopicExplanation[];
+}
+
+export interface Flashcard {
+  term: string;
+  definition: string;
 }

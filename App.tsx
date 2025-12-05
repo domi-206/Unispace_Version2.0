@@ -15,6 +15,7 @@ import { Dashboard } from './components/Dashboard';
 import { TermsOfService } from './components/TermsOfService';
 import { LearnMore } from './components/LearnMore';
 import { User, UserRole, Product, WalletTransaction, FeedPost, ProfileViewer, ChatSession, InstitutionGroup, Topic, Notification, CampusMessage, CampusMember } from './types';
+import { AlertOctagon } from 'lucide-react';
 
 // --- MOCK DATA ---
 const INITIAL_USER: User = {
@@ -34,7 +35,10 @@ const INITIAL_USER: User = {
   interests: ['Technology', 'Coding', 'Reading'],
   portfolioUrl: 'https://github.com/chioma',
   businessEmail: 'chioma.dev@gmail.com',
-  hideCampusCount: false
+  hideCampusCount: false,
+  reportsCount: 0,
+  isBanned: false,
+  blockedUsers: []
 };
 
 const MOCK_NOTIFICATIONS: Notification[] = [
@@ -61,6 +65,7 @@ const INITIAL_GROUPS: InstitutionGroup[] = [
     isPrivate: false, 
     imageUrl: 'https://picsum.photos/200/200?random=1', 
     isJoined: false,
+    status: 'ACTIVE',
     members: [
       { userId: 'u2', name: 'Emeka Obi', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emeka', role: 'PROFESSOR', joinedAt: new Date().toISOString() },
       { userId: 'u3', name: 'Zainab Musa', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zainab', role: 'COURSE_REP', joinedAt: new Date().toISOString() }
@@ -76,6 +81,7 @@ const INITIAL_GROUPS: InstitutionGroup[] = [
     isPrivate: false, 
     imageUrl: 'https://picsum.photos/200/200?random=2', 
     isJoined: true,
+    status: 'ACTIVE',
     members: [
       { userId: 'u1', name: 'Chioma Adebayo', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chioma', role: 'PROFESSOR', joinedAt: new Date().toISOString() },
       { userId: 'u4', name: 'Tunde Bakare', avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tunde', role: 'STUDENT', joinedAt: new Date().toISOString() }
@@ -110,7 +116,7 @@ function App() {
   const [topics, setTopics] = useState<Topic[]>([]);
   // Mock products for dashboard
   const [products, setProducts] = useState<Product[]>([
-     { id: 'p1', sellerId: 'u1', sellerName: 'Chioma', sellerVerified: true, title: 'Engineering Math 101', price: 5000, description: 'Slightly used.', category: 'Textbooks', imageUrl: 'https://picsum.photos/200', postedAt: new Date().toISOString(), expiresAt: new Date().toISOString() }
+     { id: 'p1', sellerId: 'u1', sellerName: 'Chioma', sellerVerified: true, title: 'Engineering Math 101', price: 5000, description: 'Slightly used.', category: 'Textbooks', imageUrl: 'https://picsum.photos/200', postedAt: new Date().toISOString(), expiresAt: new Date().toISOString(), purchasers: [] }
   ]);
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([
     { id: 'f1', authorId: 'u2', authorName: 'Emeka Obi', authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emeka', authorRole: UserRole.STUDENT, content: 'Just finished my final year project! 🚀', likes: 24, comments: 5, postedAt: new Date(Date.now() - 10000000).toISOString() }
@@ -127,6 +133,61 @@ function App() {
   };
 
   const hasTrialAccess = checkAccess();
+
+  // Safety: Report User Handler
+  const handleReportUser = (reportedUserId: string, reason: string) => {
+    // In a real app, this would hit the backend.
+    // For this demo, we will simulate a strike on the *current user* if they were the one being reported (mocking logic)
+    // Or, we can just say "Report submitted".
+    
+    // NOTE: To demonstrate the BAN logic, we will increment the report count on the current user if THEY violate terms.
+    // But this function reports *others*.
+    
+    // Let's add a notification that the report was received.
+    const newNotif: Notification = {
+      id: `n${Date.now()}`,
+      title: 'Report Received',
+      message: `We are reviewing your report against user. Reason: ${reason}`,
+      time: 'Just now',
+      read: false,
+      type: 'INFO'
+    };
+    setNotifications([newNotif, ...notifications]);
+    alert("Report submitted. Our safety team will review it.");
+  };
+
+  const handleBlockUser = (userId: string) => {
+    if (!user.blockedUsers.includes(userId)) {
+      setUser(prev => ({
+        ...prev,
+        blockedUsers: [...prev.blockedUsers, userId]
+      }));
+      alert("User blocked. You will no longer see their content.");
+    }
+  };
+
+  const handlePayBanFine = () => {
+    const FINE_AMOUNT = 5000;
+    if (user.walletBalance >= FINE_AMOUNT) {
+      setUser(prev => ({
+        ...prev,
+        walletBalance: prev.walletBalance - FINE_AMOUNT,
+        isBanned: false,
+        reportsCount: 0 // Reset reports
+      }));
+      setWalletTransactions(prev => [{
+        id: `tx${Date.now()}`,
+        type: 'DEBIT',
+        amount: FINE_AMOUNT,
+        description: 'Community Violation Fine',
+        date: new Date().toISOString(),
+        status: 'SUCCESS'
+      }, ...prev]);
+      alert("Fine paid. Your account access has been restored.");
+    } else {
+      alert("Insufficient funds to pay fine. Please top up.");
+    }
+  };
 
   const handleLogin = (userData: Partial<User>) => {
     setUser({ ...INITIAL_USER, ...userData } as User);
@@ -166,6 +227,7 @@ function App() {
       joinedAt: new Date().toISOString()
     };
 
+    // New groups are PENDING verification
     const newGroup: InstitutionGroup = {
       id: `g${Date.now()}`,
       name,
@@ -173,6 +235,7 @@ function App() {
       isPrivate: false,
       imageUrl: imageUrl || `https://picsum.photos/200/200?random=${Math.random()}`,
       isJoined: true,
+      status: 'PENDING',
       members: [creatorMember],
       messages: []
     };
@@ -183,13 +246,9 @@ function App() {
     const GUEST_FEE = 2000;
 
     // Check Logic for Guests vs Students
-    // Note: Verification is now handled by the UI Modal in Institutions.tsx 
-    // This function assumes confirmation if Guest.
     if (user.role === UserRole.GUEST) {
-      // Deduct fee for guest
       setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - GUEST_FEE }));
       
-      // Record transaction
       const feeTx: WalletTransaction = {
         id: `tx${Date.now()}`,
         type: 'DEBIT',
@@ -200,7 +259,6 @@ function App() {
       };
       setWalletTransactions(prev => [feeTx, ...prev]);
     } 
-    // Verified Students join for free (fall through to join logic)
 
     setGroups(groups.map(g => {
       if (g.id === id) {
@@ -212,7 +270,6 @@ function App() {
           joinedAt: new Date().toISOString()
         };
         
-        // Auto-messages upon joining
         const publicWelcome: CampusMessage = {
           id: `sys${Date.now()}_1`,
           senderId: 'sys',
@@ -309,7 +366,6 @@ function App() {
   };
 
   const handleAddProduct = (productData: any, cost: number) => {
-    // Deduct wallet balance mock
     setUser({ ...user, walletBalance: user.walletBalance - cost });
     const newTx: WalletTransaction = {
       id: `tx${Date.now()}`,
@@ -320,14 +376,38 @@ function App() {
       status: 'SUCCESS'
     };
     setWalletTransactions([newTx, ...walletTransactions]);
-    setProducts([...products, { ...productData, id: `p${Date.now()}`, postedAt: new Date().toISOString(), expiresAt: new Date().toISOString() }]);
+    setProducts([...products, { ...productData, id: `p${Date.now()}`, postedAt: new Date().toISOString(), expiresAt: new Date().toISOString(), purchasers: [] }]);
+  };
+
+  const handleBuyProduct = (product: Product) => {
+    setUser(prev => ({...prev, walletBalance: prev.walletBalance - product.price}));
+    const debitTx: WalletTransaction = {
+      id: `tx${Date.now()}_b`,
+      type: 'DEBIT',
+      amount: product.price,
+      description: `Purchase: ${product.title}`,
+      date: new Date().toISOString(),
+      status: 'SUCCESS'
+    };
+    setWalletTransactions(prev => [debitTx, ...prev]);
+    setProducts(prev => prev.map(p => {
+      if (p.id === product.id) {
+        return { ...p, purchasers: [...p.purchasers, user.id] };
+      }
+      return p;
+    }));
+    setNotifications(prev => [{
+      id: `n${Date.now()}`,
+      title: 'Purchase Successful',
+      message: `You bought ${product.title}. Check UniMarket for details.`,
+      time: 'Just now',
+      read: false,
+      type: 'SUCCESS'
+    }, ...prev]);
   };
 
   const handleWalletTransfer = (recipientEmail: string, amount: number) => {
-    // Deduct from sender
     setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - amount }));
-    
-    // Add transaction record
     const newTx: WalletTransaction = {
       id: `tx${Date.now()}`,
       type: 'DEBIT',
@@ -337,8 +417,6 @@ function App() {
       status: 'SUCCESS'
     };
     setWalletTransactions([newTx, ...walletTransactions]);
-    
-    // Add notification
     const newNotif: Notification = {
       id: `n${Date.now()}`,
       title: 'Transfer Successful',
@@ -366,13 +444,17 @@ function App() {
     setFeedPosts([newPost, ...feedPosts]);
   };
 
+  // Filter content based on blocked users
+  const visibleFeedPosts = feedPosts.filter(p => !user.blockedUsers.includes(p.authorId));
+  const visibleProducts = products.filter(p => !user.blockedUsers.includes(p.sellerId));
+
   const renderContent = () => {
     switch(activeTab) {
       case 'dashboard':
         return (
           <Dashboard 
             user={user} 
-            activeListings={products.filter(p => p.sellerId === user.id)}
+            activeListings={visibleProducts.filter(p => p.sellerId === user.id)}
             recentTopics={topics} 
             unreadMessages={chats.reduce((acc, chat) => acc + chat.unreadCount, 0)}
             onNavigate={setActiveTab} 
@@ -386,11 +468,19 @@ function App() {
            onTransfer={handleWalletTransfer}
          />;
       case 'market':
-        return <Marketplace products={products} user={user} hasAccess={hasTrialAccess} onAddProduct={handleAddProduct} onContact={handleContactSeller} />;
+        return <Marketplace 
+          products={visibleProducts} 
+          user={user} 
+          hasAccess={hasTrialAccess} 
+          onAddProduct={handleAddProduct} 
+          onContact={handleContactSeller}
+          onBuyProduct={handleBuyProduct}
+        />;
       case 'study':
         return <StudyHub isVerified={user.verified} hasAccess={hasTrialAccess} onShareResult={() => {}} topics={topics} onUpdateTopics={setTopics} />;
       case 'feed':
-        return <CampusFeed posts={feedPosts} user={user} onPostCreate={handleCreatePost} />;
+        // Everyone can see feed, but blocked users are filtered
+        return <CampusFeed posts={visibleFeedPosts} user={user} onPostCreate={handleCreatePost} />;
       case 'groups':
         return <Institutions 
           user={user}
@@ -418,12 +508,46 @@ function App() {
           joinedCampusCount={groups.filter(g => g.isJoined).length}
           onSubscribe={() => setUser({...user, isPremium: true})} 
           onVerify={() => {}} 
-          onUpdateProfile={(u) => setUser({...user, ...u})} 
+          onUpdateProfile={(u) => setUser({...user, ...u})}
+          onReportUser={handleReportUser}
+          onBlockUser={handleBlockUser}
         />;
       default:
         return <div>Page Not Found</div>;
     }
   };
+
+  // --- BANNED SCREEN ---
+  if (user.isBanned) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center border-2 border-red-100">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertOctagon size={40} className="text-red-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Account Banned</h2>
+          <p className="text-slate-600 mb-6">
+            Your account has been suspended due to multiple violations of our Community Terms (Reported 3+ times).
+          </p>
+          <div className="bg-slate-50 p-4 rounded-xl mb-6 text-sm text-left">
+            <p className="font-semibold mb-2">Violation Types:</p>
+            <ul className="list-disc pl-5 space-y-1 text-slate-500">
+              <li>Harassment / Cyberstalking</li>
+              <li>Hateful Content</li>
+              <li>Community Guidelines Violation</li>
+            </ul>
+          </div>
+          <p className="text-sm font-semibold text-red-600 mb-6">Fine Required: ₦5,000</p>
+          <button 
+            onClick={handlePayBanFine}
+            className="w-full py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
+          >
+            Pay Fine to Restore Access
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'LANDING') return <LandingPage onGetStarted={() => setView('AUTH')} onLearnMore={() => setView('LEARN_MORE')} featuredUsers={MOCK_AMBASSADORS} />;
   if (view === 'AUTH') return <Auth onLogin={handleLogin} onNavigateToLanding={() => setView('LANDING')} onViewTerms={() => setView('TERMS')} />;
