@@ -4,6 +4,15 @@ export enum UserRole {
   STUDENT = 'STUDENT'
 }
 
+export type SubscriptionPlan = 
+  | 'FREE' 
+  | 'PLAN_STUDY_BASIC' 
+  | 'PLAN_STUDY_STANDARD' 
+  | 'PLAN_STUDY_PREMIUM'
+  | 'PLAN_MERCHANT_BASIC' 
+  | 'PLAN_MERCHANT_STANDARD' 
+  | 'PLAN_MERCHANT_PREMIUM';
+
 export interface User {
   id: string;
   name: string;
@@ -14,8 +23,16 @@ export interface User {
   bio: string;
   university: string;
   walletBalance: number;
-  isPremium: boolean;
-  premiumExpiry?: number;
+  
+  // Subscription & Usage
+  subscriptionPlan: SubscriptionPlan;
+  subscriptionExpiry?: string;
+  weeklyUploads: number;
+  weeklyQuizzes: number;
+  weeklyAiQueries: number;
+  weeklyMarketPosts: number;
+  lastWeeklyReset: string; // ISO Date
+
   referralCode: string;
   referralCount: number;
   joinedAt: string; // ISO Date for trial logic
@@ -23,6 +40,7 @@ export interface User {
   portfolioUrl?: string;
   businessEmail?: string;
   hideCampusCount?: boolean;
+  banExpiresAt?: string; // Date string
   // Safety & Moderation
   reportsCount: number;
   isBanned: boolean;
@@ -166,6 +184,22 @@ export interface CampusMessage {
   timestamp: string;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[]; // List of User IDs who voted
+}
+
+export interface CampusPoll {
+  id: string;
+  creatorId: string;
+  question: string;
+  options: PollOption[];
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
+}
+
 export interface InstitutionGroup {
   id: string;
   name: string;
@@ -175,39 +209,21 @@ export interface InstitutionGroup {
   isJoined?: boolean;
   members: CampusMember[];
   messages: CampusMessage[];
-  status: 'ACTIVE' | 'PENDING'; // Verification status
+  polls?: CampusPoll[];
+  status: 'ACTIVE' | 'PENDING';
 }
 
 // AI Engine Types
 
-export interface PastQuestionAnswer {
-  question: string;
-  answer: string;
-  year?: string;
-  explanation: string;
-  topicRef: string;
-}
-
-export interface Prediction {
-  question: string;
-  likelihood: 'Most Likely' | 'Likely' | 'Possible';
-  reasoning: string;
-}
-
-export interface TopicExplanation {
-  topic: string;
-  explanation: string;
-}
-
-export interface AIAnalysisResult {
-  summary: { topic: string; points: string[] }[];
-  pastQuestionAnswers: PastQuestionAnswer[];
-  faqs: string[];
-  predictions: Prediction[];
-  topicExplanations: TopicExplanation[];
+export interface SolverResult {
+  markdownText: string; // The full formatted text response
 }
 
 export interface Flashcard {
-  term: string;
-  definition: string;
+  term: string; // The "Q: ..." part
+  definition: string; // The "A: ..." part
+}
+
+export interface SummaryResult {
+  markdownText: string; // The structured topic-by-topic summary
 }

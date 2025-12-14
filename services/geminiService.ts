@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuizQuestion, QuizResult, Topic, AIAnalysisResult, Flashcard } from "../types";
+import { QuizQuestion, QuizResult, Topic, Flashcard, SolverResult, SummaryResult } from "../types";
 
 // Safety check for process.env to prevent runtime crashes in browser environments
 const getApiKey = () => {
@@ -51,7 +51,7 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
         
         [END CONTENT]
       `);
-    }, 100); // Reduced delay for snappy feel
+    }, 100); 
   });
 };
 
@@ -185,145 +185,68 @@ export const askStudyQuestion = async (context: string, question: string): Promi
   return response.text || "No answer found.";
 };
 
-// --- AI ENGINE FEATURES (STRICT PYTHON LOGIC ADAPTATION) ---
+// --- NEW AI ENGINE FEATURES (EXAM SOLVER, FLASHCARDS, SUMMARY) ---
 
-export const analyzeCourseMaterial = async (courseText: string, pastQuestionsText: string): Promise<AIAnalysisResult> => {
+export const aiExamSolver = async (courseText: string, pastQText: string): Promise<SolverResult> => {
   if (!apiKey) throw new Error("API Key missing");
-
   const ai = new GoogleGenAI({ apiKey });
-  
-  // LOGIC ADAPTED FROM PYTHON SCRIPT:
-  // 1. Analyze "raw text" from past questions (extract specific academic questions, ignore instructions).
-  // 2. Act as "Expert Tutor" using "Course Material" as Context.
-  // 3. Strict Rules: Answer based on Context, or say "Not covered". Provide detailed explanation.
-  
+
   const prompt = `
-    ACT AS THE "INTELLIGENT EXAM SOLVER".
-    
-    STEP 1: EXAM PARSING
-    Analyze the "PAST QUESTIONS" text. Extract every specific academic question asked.
-    Ignore instructions like "Time allowed", "Answer all questions".
-    Deduplicate the questions.
-    
-    STEP 2: EXPERT TUTOR SOLVING
-    For each extracted question, use the "COURSE MATERIAL" as the Context to provide an answer.
-    
-    RULES:
-    1. Your answer must be strictly based on the "COURSE MATERIAL" provided.
-    2. If the answer is not found in the Context, state "This topic is not covered in the provided Course Material."
-    3. Provide a detailed explanation for the answer.
-    
-    COURSE MATERIAL (CONTEXT):
-    "${courseText.substring(0, 80000)}"
-    
-    PAST QUESTIONS (RAW TEXT):
-    "${pastQuestionsText.substring(0, 20000)}"
-    
-    OUTPUT FORMAT (JSON):
-    {
-      "pastQuestionAnswers": [
-        {
-          "question": "Extracted Question 1",
-          "answer": "Detailed Answer based on context...",
-          "topicRef": "Relevant Section Header"
-        }
-      ],
-      "summary": []
-    }
+    You are an Intelligent Exam Solver and Academic Tutor.
+    Your goal is to solve past exam questions strictly based on the provided Course Material.
+
+    CRITICAL INSTRUCTIONS:
+    1. SOURCE MATERIAL: Use ONLY the provided 'Course Material' to derive answers.
+    2. QUESTION EXTRACTION: Identify questions from the 'Past Questions' files. Look for dates or years in filenames or document headers to identify when questions appeared.
+    3. DEDUPLICATION: If a question appears multiple times, list it ONLY ONCE, but track the years and count.
+    4. FORMATTING REQUIREMENTS (Strictly follow this structure with BOLDING):
+
+    UNIT [Number/Name if identifiable]
+
+    **[Number]. [Question Text]?** (Years: [List years found e.g. 2021, 2023], Frequency: [Number of times] times)
+    [Detailed Answer: Provide a comprehensive explanation found in the notes.]
+
+    **[Number]. [Next Question]?** (Years: [e.g. 2022], Frequency: 1 time)
+    [Detailed Answer...]
+
+    PAST QUESTIONS (Raw Text):
+    "${pastQText.substring(0, 15000)}"
+
+    COURSE MATERIAL (Context):
+    "${courseText.substring(0, 50000)}"
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  topic: { type: Type.STRING },
-                  points: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
-              }
-            },
-            pastQuestionAnswers: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  question: { type: Type.STRING },
-                  answer: { type: Type.STRING },
-                  year: { type: Type.STRING },
-                  explanation: { type: Type.STRING },
-                  topicRef: { type: Type.STRING }
-                }
-              }
-            },
-            faqs: { type: Type.ARRAY, items: { type: Type.STRING } },
-            predictions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  question: { type: Type.STRING },
-                  likelihood: { type: Type.STRING },
-                  reasoning: { type: Type.STRING }
-                }
-              }
-            },
-            topicExplanations: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  topic: { type: Type.STRING },
-                  explanation: { type: Type.STRING }
-                }
-              }
-            }
-          }
-        }
-      }
     });
-
-    return safeParseJSON(response.text, {
-      summary: [],
-      pastQuestionAnswers: [],
-      faqs: [],
-      predictions: [],
-      topicExplanations: []
-    });
+    return { markdownText: response.text || "No output generated." };
   } catch (e) {
     console.error(e);
     throw e;
   }
 };
 
-export const generateFlashcards = async (text: string): Promise<Flashcard[]> => {
+export const generateStudyFlashcards = async (text: string): Promise<Flashcard[]> => {
   if (!apiKey) throw new Error("API Key missing");
-
   const ai = new GoogleGenAI({ apiKey });
-  
-  // STRICT Q: and A: format for flashcards
+
   const prompt = `
-    Generate study flashcards from the provided text.
-    
-    INSTRUCTIONS:
-    1. Identify key questions or terms in the text (especially from Past Questions sections).
-    2. Create concise, memory-friendly answers.
-    3. IMPORTANT: The 'term' field must start with 'Q: ' and the 'definition' field must start with 'A: '.
-    
-    EXAMPLE:
-    term: "Q: What is SMP?"
-    definition: "A: Symmetric Multiprocessing."
-    
+    You are a Flashcard Generator.
+    Your goal is to create a rapid-fire Q&A study sheet.
+
+    CRITICAL INSTRUCTIONS:
+    1. Extract questions from the provided text (Course Material + Past Questions).
+    2. Answer using 'Course Material'.
+    3. EXTREMELY IMPORTANT: Answers must be SHORT, CONCISE, and EASY TO UNDERSTAND.
+    4. Deduplicate questions.
+    5. OUTPUT FORMAT: Return a JSON array of objects with 'term' and 'definition'.
+       - 'term' must start with "**Q:** "
+       - 'definition' must start with "**A:** "
+
     TEXT CONTENT:
-    "${text.substring(0, 50000)}"
+    "${text.substring(0, 60000)}"
   `;
 
   try {
@@ -344,9 +267,75 @@ export const generateFlashcards = async (text: string): Promise<Flashcard[]> => 
         }
       }
     });
-
     return safeParseJSON(response.text, []);
   } catch (e) {
+    console.error(e);
     return [];
+  }
+};
+
+export const generateSmartSummary = async (courseText: string): Promise<SummaryResult> => {
+  if (!apiKey) throw new Error("API Key missing");
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `
+    You are an Expert Academic Simplifier.
+    Your goal is to provide a comprehensive summary of the uploaded document, analyzing it Topic by Topic, but using VERY SIMPLE, PLAIN, and EASY-TO-UNDERSTAND language.
+
+    CRITICAL INSTRUCTIONS:
+    1. **Simplicity**: Write as if explaining to a beginner or high school student. Avoid complex jargon or explain it immediately in simple terms.
+    2. **Structure**: Break down the document into logical **Topics/Sections**.
+    3. **Content**: For EACH major topic or concept identified, you MUST provide the following details where applicable and BOLD the labels using **:
+       - **Definition**: A simple, easy-to-grasp definition of the concept.
+       - **Key Features**: Key attributes described simply.
+       - **Types/Classifications**: Different types with simple descriptions.
+       - **Advantages**: Benefits or strengths (simplified).
+       - **Disadvantages**: Limitations or weaknesses (simplified).
+       - **Simple Explanation**: A clear, conversational paragraph explaining what this concept means in plain English.
+
+    FORMATTING REQUIREMENTS:
+
+    **[Document Title]**
+
+    **Executive Overview**
+    [A simple high-level summary of what this document is about.]
+
+    ---
+
+    **TOPIC: [Topic Name]**
+
+    *   **Definition**: [Simple definition]
+    *   **Key Features**:
+        *   [Feature 1]
+        *   [Feature 2]
+    *   **Types**:
+        *   **[Type Name]**: [Simple Description]
+    *   **Advantages**:
+        *   [Advantage 1]
+    *   **Disadvantages**:
+        *   [Disadvantage 1]
+    *   **Simple Explanation**:
+        [A paragraph explaining the concept simply.]
+
+    ---
+
+    (Repeat for all major topics)
+
+    **Conclusion**
+    [Final simple summary]
+
+    COURSE MATERIAL:
+    "${courseText.substring(0, 60000)}"
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    return { markdownText: response.text || "No summary generated." };
+  } catch (e) {
+    console.error(e);
+    throw e;
   }
 };

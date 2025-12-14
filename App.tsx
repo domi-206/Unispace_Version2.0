@@ -14,8 +14,9 @@ import { FAQ } from './components/FAQ';
 import { Dashboard } from './components/Dashboard';
 import { TermsOfService } from './components/TermsOfService';
 import { LearnMore } from './components/LearnMore';
-import { User, UserRole, Product, WalletTransaction, FeedPost, ProfileViewer, ChatSession, InstitutionGroup, Topic, Notification, CampusMessage, CampusMember } from './types';
-import { AlertOctagon } from 'lucide-react';
+import { Premium } from './components/Premium';
+import { User, UserRole, Product, WalletTransaction, FeedPost, ProfileViewer, ChatSession, InstitutionGroup, Topic, Notification, CampusMessage, CampusMember, SubscriptionPlan } from './types';
+import { AlertOctagon, Wallet as WalletIcon } from 'lucide-react';
 
 // --- MOCK DATA ---
 const INITIAL_USER: User = {
@@ -28,7 +29,14 @@ const INITIAL_USER: User = {
   bio: 'Computer Science | 300L | UNILAG',
   university: 'University of Lagos',
   walletBalance: 15000,
-  isPremium: false,
+  
+  subscriptionPlan: 'FREE',
+  weeklyUploads: 0,
+  weeklyQuizzes: 0,
+  weeklyAiQueries: 0,
+  weeklyMarketPosts: 0,
+  lastWeeklyReset: new Date().toISOString(),
+
   referralCode: 'CHIOMA23',
   referralCount: 12, // Enough for Ambassador status
   joinedAt: new Date().toISOString(),
@@ -122,9 +130,9 @@ function App() {
     { id: 'f1', authorId: 'u2', authorName: 'Emeka Obi', authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emeka', authorRole: UserRole.STUDENT, content: 'Just finished my final year project! 🚀', likes: 24, comments: 5, postedAt: new Date(Date.now() - 10000000).toISOString() }
   ]);
 
-  // Feature Access Check (7-Day Trial)
+  // Feature Access Check (7-Day Trial or Subscription)
   const checkAccess = () => {
-    if (user.isPremium) return true;
+    if (user.subscriptionPlan !== 'FREE') return true;
     const joined = new Date(user.joinedAt);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - joined.getTime());
@@ -132,18 +140,91 @@ function App() {
     return diffDays <= 7;
   };
 
-  const hasTrialAccess = checkAccess();
+  const hasAccess = checkAccess();
+
+  // Limit Check Logic
+  const checkLimit = (type: 'UPLOAD' | 'QUIZ' | 'AI' | 'MARKET_POST') => {
+    const plan = user.subscriptionPlan;
+    
+    // Unlimited Plans
+    if (plan === 'PLAN_STUDY_PREMIUM' || plan === 'PLAN_MERCHANT_PREMIUM') {
+      if (type === 'MARKET_POST' && plan === 'PLAN_STUDY_PREMIUM') {
+         alert("Your 'Study Premium' plan does not include selling. Upgrade to a Merchant plan.");
+         return false;
+      }
+      return true;
+    }
+
+    if (type === 'UPLOAD') {
+      let limit = 0;
+      if (plan === 'FREE') limit = 0; // Or 1 if in trial? Assuming 0 for expired free.
+      else if (plan.includes('BASIC')) limit = 1;
+      else if (plan.includes('STANDARD')) limit = 5;
+      
+      // Trial Logic override
+      if (plan === 'FREE' && hasAccess) limit = 1; 
+
+      if (user.weeklyUploads >= limit) {
+        alert("Weekly upload limit reached. Upgrade for more.");
+        return false;
+      }
+      setUser(prev => ({ ...prev, weeklyUploads: prev.weeklyUploads + 1 }));
+      return true;
+    }
+
+    if (type === 'QUIZ') {
+      let limit = 0;
+      if (plan.includes('BASIC')) limit = 3;
+      else if (plan.includes('STANDARD')) limit = 15;
+      
+      if (plan === 'FREE' && hasAccess) limit = 1; 
+
+      if (user.weeklyQuizzes >= limit) {
+        alert("Weekly quiz session limit reached. Upgrade for more.");
+        return false;
+      }
+      setUser(prev => ({ ...prev, weeklyQuizzes: prev.weeklyQuizzes + 1 }));
+      return true;
+    }
+
+    if (type === 'AI') {
+      let limit = 0;
+      if (plan.includes('STANDARD')) limit = 10;
+      else if (plan.includes('PREMIUM')) return true;
+      
+      if (user.weeklyAiQueries >= limit) {
+        alert("Weekly AI query limit reached. Upgrade for more.");
+        return false;
+      }
+      setUser(prev => ({ ...prev, weeklyAiQueries: prev.weeklyAiQueries + 1 }));
+      return true;
+    }
+
+    if (type === 'MARKET_POST') {
+      if (!plan.includes('MERCHANT')) {
+        alert("Your current plan does not support selling items. Upgrade to a Merchant plan.");
+        return false;
+      }
+
+      let limit = 0;
+      if (plan === 'PLAN_MERCHANT_BASIC') limit = 3;
+      else if (plan === 'PLAN_MERCHANT_STANDARD') limit = 15;
+      else if (plan === 'PLAN_MERCHANT_PREMIUM') return true;
+
+      if (user.weeklyMarketPosts >= limit) {
+         alert(`Weekly posting limit reached (${limit} posts). Upgrade for more.`);
+         return false;
+      }
+      
+      setUser(prev => ({ ...prev, weeklyMarketPosts: prev.weeklyMarketPosts + 1 }));
+      return true;
+    }
+
+    return true;
+  };
 
   // Safety: Report User Handler
   const handleReportUser = (reportedUserId: string, reason: string) => {
-    // In a real app, this would hit the backend.
-    // For this demo, we will simulate a strike on the *current user* if they were the one being reported (mocking logic)
-    // Or, we can just say "Report submitted".
-    
-    // NOTE: To demonstrate the BAN logic, we will increment the report count on the current user if THEY violate terms.
-    // But this function reports *others*.
-    
-    // Let's add a notification that the report was received.
     const newNotif: Notification = {
       id: `n${Date.now()}`,
       title: 'Report Received',
@@ -200,6 +281,27 @@ function App() {
     setChats(INITIAL_CHATS);
     setView('LANDING');
     setActiveTab('dashboard');
+  };
+
+  const handleSubscribe = (plan: SubscriptionPlan, price: number) => {
+    setUser(prev => ({
+      ...prev,
+      walletBalance: prev.walletBalance - price,
+      subscriptionPlan: plan,
+      subscriptionExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+    }));
+    
+    setWalletTransactions(prev => [{
+      id: `tx${Date.now()}_sub`,
+      type: 'DEBIT',
+      amount: price,
+      description: `Subscription: ${plan.replace(/_/g, ' ')}`,
+      date: new Date().toISOString(),
+      status: 'SUCCESS'
+    }, ...prev]);
+
+    const planName = plan.replace(/PLAN_|STUDY_|MERCHANT_/g, '').replace(/_/g, ' ');
+    alert(`Successfully subscribed to ${planName} Plan!`);
   };
 
   const handleCreateGroup = (name: string, description: string, imageUrl: string) => {
@@ -461,25 +563,43 @@ function App() {
           />
         );
       case 'wallet':
-         return <WalletCard 
-           user={user} 
-           transactions={walletTransactions} 
-           onTopUp={() => setUser({...user, walletBalance: user.walletBalance + 5000})}
-           onTransfer={handleWalletTransfer}
-         />;
+         return (
+           <div className="max-w-2xl mx-auto space-y-6">
+             <div className="flex items-center space-x-2 mb-2">
+               <WalletIcon className="text-green-600" size={28} />
+               <h2 className="text-2xl font-bold dark:text-white">UniWallet</h2>
+             </div>
+             <WalletCard 
+                user={user} 
+                transactions={walletTransactions} 
+                onTopUp={() => {
+                   setUser({...user, walletBalance: user.walletBalance + 5000});
+                   setWalletTransactions(prev => [{
+                      id: `tx${Date.now()}_top`,
+                      type: 'CREDIT',
+                      amount: 5000,
+                      description: 'Top Up',
+                      date: new Date().toISOString(),
+                      status: 'SUCCESS'
+                   }, ...prev]);
+                }}
+                onTransfer={handleWalletTransfer}
+             />
+           </div>
+         );
       case 'market':
         return <Marketplace 
           products={visibleProducts} 
           user={user} 
-          hasAccess={hasTrialAccess} 
+          hasAccess={hasAccess} 
           onAddProduct={handleAddProduct} 
           onContact={handleContactSeller}
           onBuyProduct={handleBuyProduct}
+          checkLimit={checkLimit}
         />;
       case 'study':
-        return <StudyHub isVerified={user.verified} hasAccess={hasTrialAccess} onShareResult={() => {}} topics={topics} onUpdateTopics={setTopics} />;
+        return <StudyHub user={user} hasAccess={hasAccess} onShareResult={() => {}} topics={topics} onUpdateTopics={setTopics} checkLimit={checkLimit} />;
       case 'feed':
-        // Everyone can see feed, but blocked users are filtered
         return <CampusFeed posts={visibleFeedPosts} user={user} onPostCreate={handleCreatePost} />;
       case 'groups':
         return <Institutions 
@@ -499,6 +619,8 @@ function App() {
              messages: [...c.messages, { id: `m${Date.now()}`, senderId: user.id, text: txt, timestamp: new Date().toISOString() }]
            } : c));
         }} />;
+      case 'premium':
+        return <Premium user={user} onSubscribe={handleSubscribe} />;
       case 'faq':
         return <FAQ />;
       case 'profile':
@@ -506,7 +628,7 @@ function App() {
           user={user} 
           viewers={[]} 
           joinedCampusCount={groups.filter(g => g.isJoined).length}
-          onSubscribe={() => setUser({...user, isPremium: true})} 
+          onSubscribe={() => setActiveTab('premium')} 
           onVerify={() => {}} 
           onUpdateProfile={(u) => setUser({...user, ...u})}
           onReportUser={handleReportUser}

@@ -17,7 +17,8 @@ import {
   LogOut,
   Info,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Crown
 } from 'lucide-react';
 import { Notification } from '../types';
 
@@ -62,6 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const personalItems = [
     { id: 'wallet', label: 'UniWallet', icon: Wallet },
     { id: 'profile', label: 'Profile', icon: UserCircle },
+    { id: 'premium', label: 'Upgrade', icon: Crown },
   ];
 
   const handleNavClick = (id: string) => {

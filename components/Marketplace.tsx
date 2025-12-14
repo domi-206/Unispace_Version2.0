@@ -10,9 +10,10 @@ interface MarketplaceProps {
   onAddProduct: (product: Omit<Product, 'id' | 'postedAt' | 'expiresAt' | 'purchasers'>, cost: number) => void;
   onContact: (product: Product) => void;
   onBuyProduct: (product: Product) => void;
+  checkLimit: (type: 'MARKET_POST') => boolean;
 }
 
-export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAccess, onAddProduct, onContact, onBuyProduct }) => {
+export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAccess, onAddProduct, onContact, onBuyProduct, checkLimit }) => {
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -44,10 +45,21 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
     );
   }
 
+  const handleStartListing = () => {
+     if (!checkLimit('MARKET_POST')) return;
+     setIsListingModalOpen(true);
+  };
+
   const handleCreateListing = (e: React.FormEvent) => {
     e.preventDefault();
     if (user.walletBalance < listingFee) {
        alert("Insufficient UniWallet balance.");
+       return;
+    }
+
+    // Guest Campus Pro restriction: Only Days plan allowed
+    if (user.subscriptionPlan === 'CAMPUS_PRO_GUEST' && durationUnit !== MarketplaceDurationUnit.DAYS) {
+       alert("Your plan only supports listing duration in 'Days'. Upgrade to Elite for Weeks/Months.");
        return;
     }
 
@@ -57,9 +69,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
     }
 
     const digitalFileUrl = digitalFile ? URL.createObjectURL(digitalFile) : undefined;
-    // For physical items, we use a placeholder image. For digital, we might use a generic doc icon or allow image upload too.
     const imgUrl = isDigital 
-      ? 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400' // Book/Doc placeholder
+      ? 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400' 
       : `https://picsum.photos/400/300?random=${Math.random()}`;
 
     onAddProduct({
@@ -137,15 +148,14 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
             <option value="Fashion">Fashion</option>
             <option value="Services">Services</option>
           </select>
-          {user.role === 'STUDENT' && user.verified && (
-            <button 
-              onClick={() => setIsListingModalOpen(true)}
-              className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-700 flex items-center space-x-2 shadow-lg shadow-green-200 dark:shadow-none"
-            >
-              <Plus size={20} />
-              <span className="hidden sm:inline">Sell Item</span>
-            </button>
-          )}
+          {/* Allow students AND guests (if plan allows) to sell */}
+          <button 
+            onClick={handleStartListing}
+            className="bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-700 flex items-center space-x-2 shadow-lg shadow-green-200 dark:shadow-none"
+          >
+            <Plus size={20} />
+            <span className="hidden sm:inline">Sell Item</span>
+          </button>
         </div>
       </div>
 
@@ -357,8 +367,13 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
                            className="flex-1 p-2 rounded-lg text-sm border-none bg-slate-900 text-white"
                         >
                            <option value={MarketplaceDurationUnit.DAYS}>Days</option>
-                           <option value={MarketplaceDurationUnit.WEEKS}>Weeks</option>
-                           <option value={MarketplaceDurationUnit.MONTHS}>Months</option>
+                           {/* Limit: Guest Pro cannot use Weeks/Months */}
+                           {user.subscriptionPlan !== 'CAMPUS_PRO_GUEST' && (
+                             <>
+                              <option value={MarketplaceDurationUnit.WEEKS}>Weeks</option>
+                              <option value={MarketplaceDurationUnit.MONTHS}>Months</option>
+                             </>
+                           )}
                         </select>
                         <input 
                            type="number" 
