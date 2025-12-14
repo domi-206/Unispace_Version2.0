@@ -4,9 +4,10 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FAQ_ITEMS = [
   { q: "How do I verify my student status?", a: "To verify, go to your Profile or Sign Up as a Student and upload a valid University ID card or Admission Letter. Verification typically takes 24 hours." },
-  { q: "Is Unispace free to use?", a: "Unispace offers a 7-day free trial for the Marketplace and StudyHub. After that, you can subscribe to continue enjoying premium features." },
+  { q: "What are the subscription options?", a: "We offer two main categories: 'Study Only' plans for access to AI tools and quizzes, and 'Study + Sell' (Merchant) plans which add Marketplace selling privileges. Both have Basic, Standard, and Premium tiers." },
+  { q: "Can I sell items as a Guest?", a: "Yes, Guests can sell items by subscribing to any 'Merchant' plan. However, please note that subscription rates for Guests are higher than for verified students." },
+  { q: "Can Guests post on the Campus Feed?", a: "Absolutely! Guests are now welcome to share updates, ask questions, and interact with the community on the Campus Feed." },
   { q: "How does the Refer & Earn work?", a: "Share your unique referral code with friends. Once they sign up and verify, it counts towards your referral score. Refer 10 people to be featured on our Hall of Fame!" },
-  { q: "Can I sell items as a Guest?", a: "Guests can view items but cannot list products. You must be a verified student to sell on UniMarket to ensure safety and trust." },
   { q: "How do I create an Institution Group?", a: "Go to the Institutions tab and click 'Create Group'. You can create groups for your department, club, or study circle." }
 ];
 

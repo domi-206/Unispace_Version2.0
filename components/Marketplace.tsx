@@ -57,9 +57,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
        return;
     }
 
-    // Guest Campus Pro restriction: Only Days plan allowed
-    if (user.subscriptionPlan === 'CAMPUS_PRO_GUEST' && durationUnit !== MarketplaceDurationUnit.DAYS) {
-       alert("Your plan only supports listing duration in 'Days'. Upgrade to Elite for Weeks/Months.");
+    // Guest/Basic Merchant restriction: Only Days plan allowed
+    if (user.subscriptionPlan === 'PLAN_MERCHANT_BASIC' && durationUnit !== MarketplaceDurationUnit.DAYS) {
+       alert("Your plan only supports listing duration in 'Days'. Upgrade to Pro/Tycoon for Weeks/Months.");
        return;
     }
 
@@ -367,8 +367,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ products, user, hasAcc
                            className="flex-1 p-2 rounded-lg text-sm border-none bg-slate-900 text-white"
                         >
                            <option value={MarketplaceDurationUnit.DAYS}>Days</option>
-                           {/* Limit: Guest Pro cannot use Weeks/Months */}
-                           {user.subscriptionPlan !== 'CAMPUS_PRO_GUEST' && (
+                           {/* Limit: Basic Merchant cannot use Weeks/Months */}
+                           {user.subscriptionPlan !== 'PLAN_MERCHANT_BASIC' && (
                              <>
                               <option value={MarketplaceDurationUnit.WEEKS}>Weeks</option>
                               <option value={MarketplaceDurationUnit.MONTHS}>Months</option>

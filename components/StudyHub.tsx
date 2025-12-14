@@ -220,7 +220,12 @@ export const StudyHub: React.FC<StudyHubProps> = ({ user, hasAccess, onShareResu
                  <>
                    <Upload size={36} className="mx-auto text-green-600 mb-4" />
                    <h3 className="text-2xl font-bold dark:text-white mb-2">Upload Material</h3>
-                   <p className="text-sm text-slate-500 mb-4">Uploads left this week: <span className="font-bold">{user.subscriptionPlan === 'ELITE' ? 'Unlimited' : (user.subscriptionPlan === 'FREE' ? 0 : 1 - user.weeklyUploads)}</span></p>
+                   <p className="text-sm text-slate-500 mb-4">Uploads left this week: <span className="font-bold">
+                     {['PLAN_STUDY_PREMIUM', 'PLAN_MERCHANT_PREMIUM'].includes(user.subscriptionPlan) ? 'Unlimited' : 
+                       (user.subscriptionPlan.includes('STANDARD') ? Math.max(0, 5 - user.weeklyUploads) : 
+                       (user.subscriptionPlan.includes('BASIC') ? Math.max(0, 1 - user.weeklyUploads) : 
+                       (hasAccess ? Math.max(0, 1 - user.weeklyUploads) : 0)))}
+                   </span></p>
                    <input type="file" id="doc-upload" className="hidden" onChange={handleFileUpload} accept=".pdf,.docx,.txt" />
                    <label htmlFor="doc-upload" className="inline-block bg-slate-900 dark:bg-green-600 text-white px-8 py-3 rounded-xl font-bold cursor-pointer hover:opacity-90">Generate Quiz Path</label>
                  </>
@@ -248,7 +253,12 @@ export const StudyHub: React.FC<StudyHubProps> = ({ user, hasAccess, onShareResu
                     <button onClick={handleStartQuiz} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">Start Quiz</button>
                     <button onClick={() => setMode('ASK_AI')} className="w-full bg-blue-50 text-blue-600 py-3 rounded-xl font-bold hover:bg-blue-100">Ask AI</button>
                   </div>
-                  <p className="text-xs text-slate-400 mt-4">Quizzes left this week: {user.subscriptionPlan === 'ELITE' ? 'Unlimited' : (user.subscriptionPlan === 'BASIC_SCHOLAR' ? 1 - user.weeklyQuizzes : (user.subscriptionPlan === 'CAMPUS_PRO_GUEST' ? 3 - user.weeklyQuizzes : 2 - user.weeklyQuizzes))}</p>
+                  <p className="text-xs text-slate-400 mt-4">Quizzes left this week: {
+                    ['PLAN_STUDY_PREMIUM', 'PLAN_MERCHANT_PREMIUM'].includes(user.subscriptionPlan) ? 'Unlimited' : 
+                    (user.subscriptionPlan.includes('STANDARD') ? Math.max(0, 15 - user.weeklyQuizzes) :
+                    (user.subscriptionPlan.includes('BASIC') ? Math.max(0, 3 - user.weeklyQuizzes) :
+                    (hasAccess ? Math.max(0, 1 - user.weeklyQuizzes) : 0)))
+                  }</p>
                 </div>
               )}
               {mode === 'ASK_AI' && (

@@ -78,7 +78,8 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Create Post Widget */}
-      {user.role === UserRole.STUDENT && user.verified && (
+      {/* Open to both Verified Students and Guests */}
+      {((user.role === UserRole.STUDENT && user.verified) || user.role === UserRole.GUEST) && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
           <form onSubmit={handleSubmit}>
             <div className="flex space-x-4">
@@ -87,7 +88,7 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
                 <textarea
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Share your thoughts with the campus..."
+                  placeholder={user.role === UserRole.GUEST ? "Share your experience or ask questions..." : "Share your thoughts with the campus..."}
                   className="w-full bg-slate-900 rounded-xl p-3 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none border border-transparent text-white placeholder:text-slate-400"
                   rows={3}
                 />
@@ -154,6 +155,9 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
                     <span className="font-bold text-slate-900 dark:text-white text-sm">{post.authorName}</span>
                     {post.authorRole === UserRole.STUDENT && (
                       <span className="bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">STUDENT</span>
+                    )}
+                    {post.authorRole === UserRole.GUEST && (
+                      <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">GUEST</span>
                     )}
                     <span className="text-slate-400 text-xs">• {new Date(post.postedAt).toLocaleDateString()}</span>
                   </div>

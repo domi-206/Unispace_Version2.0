@@ -243,7 +243,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, currentUser, viewers, jo
                  </div>
                  <div className="space-y-4">
                     {/* Blurred / Hidden Content if NOT Premium */}
-                    {!user.isPremium ? (
+                    {user.subscriptionPlan === 'FREE' ? (
                         <>
                            {[1, 2, 3].map((i) => (
                               <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 filter blur-[2px] opacity-60">

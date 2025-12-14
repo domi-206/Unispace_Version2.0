@@ -209,8 +209,7 @@ function App() {
       let limit = 0;
       if (plan === 'PLAN_MERCHANT_BASIC') limit = 3;
       else if (plan === 'PLAN_MERCHANT_STANDARD') limit = 15;
-      else if (plan === 'PLAN_MERCHANT_PREMIUM') return true;
-
+      
       if (user.weeklyMarketPosts >= limit) {
          alert(`Weekly posting limit reached (${limit} posts). Upgrade for more.`);
          return false;
