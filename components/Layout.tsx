@@ -85,7 +85,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <div className="md:hidden bg-green-700 text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
         <div className="flex items-center space-x-2">
           <div className="bg-white text-green-700 p-1.5 rounded-lg font-bold text-xl">U</div>
-          <span className="font-bold text-lg tracking-tight">Unispace</span>
+          <span className="font-bold text-lg tracking-tight">UniSpace</span>
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -102,7 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="h-full flex flex-col">
           <div className={`hidden md:flex items-center space-x-2 p-6 border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
             <div className="bg-green-600 text-white p-2 rounded-lg font-bold text-2xl">U</div>
-            <span className={`font-bold text-2xl tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Unispace</span>
+            <span className={`font-bold text-2xl tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>UniSpace</span>
           </div>
 
           <div className="p-4 flex-1 overflow-y-auto">

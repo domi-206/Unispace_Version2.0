@@ -40,14 +40,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnM
               <span className="text-green-400">Upgraded.</span>
             </h1>
             <p className="text-xl text-green-100 mb-8 max-w-2xl leading-relaxed">
-              Unispace connects you with everything you need: a trusted marketplace, AI-powered study tools, and a thriving community of peers across Nigeria.
+              UniSpace connects you with everything you need: a trusted marketplace, AI-powered study tools, and a thriving community of peers across Nigeria.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
                <button 
                  onClick={onGetStarted}
                  className="bg-green-400 text-green-950 px-8 py-4 rounded-full font-bold text-lg hover:bg-green-300 transition-all hover:scale-105 shadow-lg shadow-green-900/50"
                >
-                 Join Unispace Now
+                 Join UniSpace Now
                </button>
                <button 
                  onClick={onLearnMore}
@@ -97,7 +97,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnM
                  </div>
                  <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Campus Ambassadors</h2>
                  <p className="text-slate-500 max-w-2xl mx-auto">
-                    Meet the students driving change and building the Unispace community across Nigeria. 
+                    Meet the students driving change and building the UniSpace community across Nigeria. 
                     Refer 10 friends to get featured here!
                  </p>
               </div>
@@ -134,10 +134,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLearnM
          <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
                <div className="bg-green-600 text-white p-1.5 rounded-lg font-bold text-xl">U</div>
-               <span className="font-bold text-white text-xl">Unispace</span>
+               <span className="font-bold text-white text-xl">UniSpace</span>
             </div>
             <div className="text-sm">
-               &copy; {new Date().getFullYear()} Unispace Nigeria. All rights reserved.
+               &copy; {new Date().getFullYear()} UniSpace Nigeria. All rights reserved.
             </div>
          </div>
       </footer>

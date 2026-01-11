@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { FeedPost, User, UserRole } from '../types';
-import { MessageSquare, Heart, Share2, PenSquare, Trophy, Image as ImageIcon, X, Send } from 'lucide-react';
+import { MessageSquare, Heart, Share2, PenSquare, Trophy, Image as ImageIcon, X, Send, Filter } from 'lucide-react';
+import { NIGERIAN_UNIVERSITIES } from '../data/universities';
 
 interface CampusFeedProps {
   posts: FeedPost[];
@@ -13,9 +14,9 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [schoolFilter, setSchoolFilter] = useState('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Interaction States
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
@@ -46,41 +47,42 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
   const toggleLike = (postId: string) => {
     setLikedPosts(prev => {
       const newLikes = new Set(prev);
-      if (newLikes.has(postId)) {
-        newLikes.delete(postId);
-      } else {
-        newLikes.add(postId);
-      }
+      if (newLikes.has(postId)) newLikes.delete(postId);
+      else newLikes.add(postId);
       return newLikes;
     });
   };
 
-  const toggleComment = (postId: string) => {
-    if (activeCommentPostId === postId) {
-      setActiveCommentPostId(null);
-    } else {
-      setActiveCommentPostId(postId);
-      setCommentText('');
-    }
-  };
-
-  const submitComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (commentText.trim()) {
-      // In a real app, this would send to backend.
-      // Here we just clear the input to simulate success.
-      alert("Comment posted!");
-      setCommentText('');
-      setActiveCommentPostId(null);
-    }
-  };
+  const filteredPosts = posts.filter(p => schoolFilter === 'All' || p.authorUniversity === schoolFilter);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Create Post Widget */}
-      {/* Open to both Verified Students and Guests */}
-      {((user.role === UserRole.STUDENT && user.verified) || user.role === UserRole.GUEST) && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+      {/* School Filter */}
+      <div className="flex items-center space-x-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <Filter size={18} className="text-green-600" />
+        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Viewing:</span>
+        <select 
+          value={schoolFilter}
+          onChange={(e) => setSchoolFilter(e.target.value)}
+          className="flex-1 bg-transparent border-none text-sm font-bold text-green-600 focus:ring-0 outline-none cursor-pointer"
+        >
+          <option value="All">All Universities</option>
+          <option value={user.university}>{user.university} (My School)</option>
+          {NIGERIAN_UNIVERSITIES.filter(u => u !== user.university).slice(0, 10).map(u => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Create Post Section */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+           <h3 className="font-bold text-slate-800 dark:text-white flex items-center">
+             <PenSquare size={18} className="mr-2 text-green-600" />
+             Create Post
+           </h3>
+        </div>
+        <div className="p-4">
           <form onSubmit={handleSubmit}>
             <div className="flex space-x-4">
               <img src={user.avatarUrl} alt="User" className="w-10 h-10 rounded-full bg-slate-200 object-cover" />
@@ -88,49 +90,26 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
                 <textarea
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder={user.role === UserRole.GUEST ? "Share your experience or ask questions..." : "Share your thoughts with the campus..."}
-                  className="w-full bg-slate-900 rounded-xl p-3 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none border border-transparent text-white placeholder:text-slate-400"
+                  placeholder={user.role === UserRole.GUEST ? "Share your experience or ask questions..." : "What's happening on campus?"}
+                  className="w-full bg-slate-100 dark:bg-slate-900 rounded-xl p-3 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none border-transparent text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 transition-all"
                   rows={3}
                 />
                 
                 {previewUrl && (
                   <div className="relative mt-2 inline-block">
-                    <img src={previewUrl} alt="Preview" className="h-32 w-auto rounded-lg border border-slate-200 dark:border-slate-600" />
-                    <button 
-                      type="button" 
-                      onClick={clearImage}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
-                    >
-                      <X size={12} />
-                    </button>
+                    <img src={previewUrl} alt="Preview" className="h-32 w-auto rounded-lg border border-slate-200 dark:border-slate-600 object-cover" />
+                    <button type="button" onClick={clearImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"><X size={12} /></button>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center mt-3">
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-colors"
-                      title="Upload Image"
-                    >
-                      <ImageIcon size={20} />
-                    </button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                    />
-                    <div className="text-xs text-slate-400 hidden sm:block">Posts are visible to everyone</div>
-                  </div>
-                  <button 
-                    type="submit" 
-                    disabled={!newPostContent.trim() && !selectedImage}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center space-x-2 shadow-lg shadow-green-200 dark:shadow-none"
-                  >
-                    <PenSquare size={16} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:text-slate-400 dark:hover:bg-green-900/20 rounded-full transition-colors flex items-center space-x-2">
+                    <ImageIcon size={20} />
+                    <span className="text-xs font-medium hidden sm:inline">Add Photo</span>
+                  </button>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+                  <button type="submit" disabled={!newPostContent.trim() && !selectedImage} className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-all flex items-center space-x-2 shadow-md shadow-green-200 active:scale-95">
+                    <Send size={16} />
                     <span>Post</span>
                   </button>
                 </div>
@@ -138,14 +117,12 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
             </div>
           </form>
         </div>
-      )}
+      </div>
 
       {/* Feed */}
       <div className="space-y-4">
-        {posts.map((post) => {
+        {filteredPosts.map((post) => {
           const isLiked = likedPosts.has(post.id);
-          const isCommenting = activeCommentPostId === post.id;
-
           return (
             <div key={post.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="p-4 flex items-start space-x-3">
@@ -153,80 +130,24 @@ export const CampusFeed: React.FC<CampusFeedProps> = ({ posts, user, onPostCreat
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <span className="font-bold text-slate-900 dark:text-white text-sm">{post.authorName}</span>
-                    {post.authorRole === UserRole.STUDENT && (
-                      <span className="bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">STUDENT</span>
-                    )}
-                    {post.authorRole === UserRole.GUEST && (
-                      <span className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">GUEST</span>
-                    )}
-                    <span className="text-slate-400 text-xs">• {new Date(post.postedAt).toLocaleDateString()}</span>
+                    <span className="text-slate-400 text-xs">• {post.authorUniversity}</span>
                   </div>
-                  
                   {post.content && <p className="text-slate-800 dark:text-slate-200 text-sm mt-2 whitespace-pre-line">{post.content}</p>}
-                  
                   {post.imageUrl && (
                     <div className="mt-3 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700">
-                      <img src={post.imageUrl} alt="Post content" className="w-full max-h-96 object-cover" />
+                      <img src={post.imageUrl} alt="Post" className="w-full max-h-96 object-cover" />
                     </div>
-                  )}
-
-                  {/* Attachments - e.g. Quiz Result */}
-                  {post.isQuizResult && (
-                     <div className="mt-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-100 dark:border-green-800 flex items-center space-x-4">
-                        <div className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm">
-                           <Trophy className="text-yellow-500" size={24} />
-                        </div>
-                        <div>
-                           <p className="text-green-900 dark:text-green-300 font-bold text-sm">Ace'd a StudyHub Quiz!</p>
-                           <p className="text-green-600 dark:text-green-400 text-xs">Score: {post.quizScore}%</p>
-                        </div>
-                     </div>
                   )}
                 </div>
               </div>
-              
               <div className="bg-slate-50 dark:bg-slate-700/50 px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-slate-500 dark:text-slate-400">
-                 <button 
-                   onClick={() => toggleLike(post.id)}
-                   className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
-                 >
+                 <button onClick={() => toggleLike(post.id)} className={`flex items-center space-x-2 transition-colors ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
                     <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
                     <span className="text-xs font-medium">{post.likes + (isLiked ? 1 : 0)}</span>
                  </button>
-                 <button 
-                   onClick={() => toggleComment(post.id)}
-                   className={`flex items-center space-x-2 transition-colors ${isCommenting ? 'text-green-600' : 'hover:text-green-600'}`}
-                 >
-                    <MessageSquare size={18} />
-                    <span className="text-xs font-medium">{post.comments}</span>
-                 </button>
-                 <button className="flex items-center space-x-2 hover:text-green-600 transition-colors">
-                    <Share2 size={18} />
-                 </button>
+                 <button className="flex items-center space-x-2 hover:text-green-600 transition-colors"><MessageSquare size={18} /> <span className="text-xs font-medium">{post.comments}</span></button>
+                 <button className="flex items-center space-x-2 hover:text-green-600 transition-colors"><Share2 size={18} /></button>
               </div>
-
-              {/* Comment Input Section */}
-              {isCommenting && (
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
-                  <form onSubmit={submitComment} className="flex space-x-2">
-                    <input 
-                      type="text" 
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Write a comment..." 
-                      className="flex-1 px-4 py-2 text-sm rounded-full border border-slate-700 bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-slate-400"
-                      autoFocus
-                    />
-                    <button 
-                      type="submit" 
-                      disabled={!commentText.trim()}
-                      className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50 transition-colors"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </form>
-                </div>
-              )}
             </div>
           );
         })}

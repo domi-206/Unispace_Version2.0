@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, ShieldAlert, Gavel, HeartHandshake } from 'lucide-react';
 
 interface TermsOfServiceProps {
@@ -24,7 +24,7 @@ export const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
             <h2 className="text-xl font-bold text-red-700 flex items-center mb-4">
               <ShieldAlert className="mr-2" /> Zero Tolerance Policy
             </h2>
-            <p className="mb-4 font-medium">Unispace is a platform for academic growth, business, and social development. We have a zero-tolerance policy for the following:</p>
+            <p className="mb-4 font-medium">UniSpace is a platform for academic growth, business, and social development. We have a zero-tolerance policy for the following:</p>
             <ul className="list-disc pl-5 space-y-2 text-sm text-red-800">
               <li><strong>No Hard Drugs:</strong> The sale, promotion, or discussion of illegal narcotics or controlled substances is strictly prohibited.</li>
               <li><strong>No Sexual Abuse or Harassment:</strong> Any form of sexual misconduct, unsolicited advances, or harassment will result in an immediate ban and reporting to authorities.</li>
@@ -39,7 +39,7 @@ export const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack }) => {
               <HeartHandshake className="mr-2 text-green-600" />
               1. Purpose of Platform
             </h2>
-            <p>Unispace is designed to improve one another. Blogs, Campuses, and Marketplace listings must be centered around:</p>
+            <p>UniSpace is designed to improve one another. Blogs, Campuses, and Marketplace listings must be centered around:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li>Academic Education & Research</li>
               <li>Legitimate Student Business & Commerce</li>

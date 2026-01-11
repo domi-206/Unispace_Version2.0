@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { InstitutionGroup, User, CampusRole } from '../types';
-import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle, CreditCard, Clock } from 'lucide-react';
+import { InstitutionGroup, User, CampusRole, UserRole, CampusMember } from '../types';
+import { Users, Lock, Plus, Send, Crown, Shield, LogOut, ArrowLeft, Upload, Share2, Copy, Check, AlertCircle, Clock, X, Globe, Briefcase, Building, ExternalLink, MapPin, Hash, UserCircle } from 'lucide-react';
 
 interface InstitutionsProps {
   user: User;
@@ -16,8 +16,8 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [selectedMemberProfile, setSelectedMemberProfile] = useState<CampusMember | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [paymentGroup, setPaymentGroup] = useState<InstitutionGroup | null>(null); // For Guest Payment Modal
   
   // Create Form State
   const [newName, setNewName] = useState('');
@@ -33,13 +33,8 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
   const currentUserMember = activeGroup?.members.find(m => m.userId === user.id);
   const isProfessor = currentUserMember?.role === 'PROFESSOR';
 
-  const GUEST_JOIN_FEE = 2000;
-  const CREATE_CAMPUS_FEE = 5000;
-
-  // Filter out pending groups from general view unless user is creator/member
   const visibleGroups = groups.filter(g => g.status === 'ACTIVE' || g.isJoined);
 
-  // Auto-scroll chat
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -56,15 +51,7 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check funds for everyone (Guests and Students both pay to build)
-    if (user.walletBalance < CREATE_CAMPUS_FEE) {
-      alert(`Insufficient funds. You need ₦${CREATE_CAMPUS_FEE.toLocaleString()} to build a campus.`);
-      return;
-    }
-
     if (newName && newDesc) {
-      // Logic handled in App.tsx will deduct the fee
       const imgUrl = newImageFile ? URL.createObjectURL(newImageFile) : previewUrl;
       onCreate(newName, newDesc, imgUrl);
       setIsCreateModalOpen(false);
@@ -72,29 +59,12 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
       setNewDesc('');
       setNewImageFile(null);
       setPreviewUrl('https://picsum.photos/200/200');
-      alert("Campus created! It is now PENDING verification.");
+      alert("Campus created! It is now PENDING verification. Our team will release it shortly.");
     }
   };
 
   const handleJoinClick = (group: InstitutionGroup) => {
-    if (user.role === 'GUEST') {
-      // Open Payment Modal for Guests
-      setPaymentGroup(group);
-    } else {
-      // Verified students join immediately (free)
-      onJoin(group.id);
-    }
-  };
-
-  const confirmGuestPayment = () => {
-    if (paymentGroup) {
-      if (user.walletBalance < GUEST_JOIN_FEE) {
-        alert("Insufficient wallet balance for this transaction.");
-      } else {
-        onJoin(paymentGroup.id);
-        setPaymentGroup(null);
-      }
-    }
+    onJoin(group.id);
   };
 
   const handleSend = (e: React.FormEvent) => {
@@ -128,51 +98,59 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
     }
   };
 
+  const canBeCourseRep = (joinedAt: string) => {
+    const joinedDate = new Date(joinedAt);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return joinedDate <= thirtyDaysAgo;
+  };
+
   // -- RENDER: ACTIVE CAMPUS CHAT VIEW --
   if (activeGroup) {
     if (activeGroup.status === 'PENDING') {
       return (
-        <div className="flex flex-col items-center justify-center h-96 text-center p-6 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <div className="bg-orange-100 p-4 rounded-full mb-4">
+        <div className="flex flex-col items-center justify-center h-96 text-center p-6 bg-white dark:bg-slate-800 rounded-[32px] border border-slate-200 dark:border-slate-700 shadow-xl">
+          <div className="bg-orange-100 p-6 rounded-full mb-6">
             <Clock size={48} className="text-orange-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Campus Pending Verification</h2>
-          <p className="text-slate-500 max-w-md mt-2">
-            "{activeGroup.name}" is currently under review by our safety team to ensure it meets our community standards.
+          <h2 className="text-3xl font-black text-slate-800 dark:text-white">Campus Pending Release</h2>
+          <p className="text-slate-500 max-w-md mt-2 font-bold leading-relaxed">
+            "{activeGroup.name}" has been submitted. Our team manually assesses every campus before public release.
           </p>
-          <button onClick={() => setActiveGroupId(null)} className="mt-6 text-slate-500 hover:text-slate-800 dark:hover:text-white">Back to List</button>
+          <button onClick={() => setActiveGroupId(null)} className="mt-8 px-8 py-3 bg-slate-100 rounded-2xl text-slate-600 font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all">Back to List</button>
         </div>
       );
     }
 
     return (
-      <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in duration-500">
+        <MemberProfileModal />
+        
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-            <div className="flex items-center space-x-3">
-              <button onClick={() => setActiveGroupId(null)} className="md:hidden p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <div className="flex items-center space-x-4">
+              <button onClick={() => setActiveGroupId(null)} className="md:hidden p-3 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xl transition-all">
                 <ArrowLeft size={20} />
               </button>
-              <img src={activeGroup.imageUrl} alt={activeGroup.name} className="w-10 h-10 rounded-xl object-cover" />
+              <img src={activeGroup.imageUrl} alt={activeGroup.name} className="w-12 h-12 rounded-2xl object-cover shadow-md" />
               <div>
-                <h3 className="font-bold text-slate-800 dark:text-white truncate max-w-[200px]">{activeGroup.name}</h3>
-                <p className="text-xs text-slate-500">{activeGroup.members.length} Students • {activeGroup.description}</p>
+                <h3 className="font-black text-slate-800 dark:text-white truncate max-w-[180px] text-lg leading-tight">{activeGroup.name}</h3>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{activeGroup.members.length} Enrolled</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <button 
                 onClick={() => handleShare(activeGroup.id)}
-                className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors flex items-center space-x-1"
-                title="Copy Campus Link"
+                className="p-3 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-2xl transition-all flex items-center space-x-2"
               >
                 {copiedId === activeGroup.id ? <Check size={20} /> : <Share2 size={20} />}
-                <span className="text-xs font-bold hidden sm:inline">{copiedId === activeGroup.id ? 'Copied' : 'Share'}</span>
+                <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Invite</span>
               </button>
               <button 
                 onClick={() => setShowMembersPanel(!showMembersPanel)}
-                className="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className={`p-3 rounded-2xl transition-all ${showMembersPanel ? 'bg-[#07bc0c] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-200'}`}
               >
                 <Users size={20} />
               </button>
@@ -180,12 +158,12 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
           </div>
 
           {/* Messages */}
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-100 dark:bg-slate-950/50">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-100 dark:bg-slate-950/30">
             {activeGroup.messages.map((msg) => {
               if (msg.senderId === 'sys') {
                 return (
-                  <div key={msg.id} className="flex justify-center my-4">
-                    <span className="text-xs font-medium text-slate-400 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1 rounded-full">
+                  <div key={msg.id} className="flex justify-center my-6">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 bg-white/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-700">
                       {msg.text}
                     </span>
                   </div>
@@ -193,96 +171,100 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
               }
 
               const isMe = msg.senderId === user.id;
+              const senderMember = activeGroup.members.find(m => m.userId === msg.senderId);
+
               return (
                 <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  {!isMe && <img src={msg.senderAvatar} className="w-8 h-8 rounded-full mr-2 self-end mb-1" />}
-                  <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                  {!isMe && (
+                    <button onClick={() => senderMember && setSelectedMemberProfile(senderMember)} className="self-end mb-1">
+                      <img src={msg.senderAvatar} className="w-10 h-10 rounded-2xl mr-3 shadow-sm object-cover hover:scale-105 transition-transform" />
+                    </button>
+                  )}
+                  <div className={`max-w-[80%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
                     {!isMe && (
-                      <div className="flex items-center space-x-1 ml-1 mb-1">
-                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{msg.senderName}</span>
-                        {getRoleIcon(msg.role)}
+                      <div className="flex items-center space-x-2 ml-1 mb-1.5">
+                        <button onClick={() => senderMember && setSelectedMemberProfile(senderMember)} className="text-xs font-black text-slate-700 dark:text-slate-300 hover:text-[#07bc0c] transition-colors">{msg.senderName}</button>
+                        {getRoleIcon(msg.role || 'STUDENT')}
                       </div>
                     )}
-                    <div className={`px-4 py-2 rounded-2xl text-sm ${
+                    <div className={`px-6 py-3 rounded-3xl text-sm font-medium leading-relaxed shadow-sm ${
                       isMe 
-                        ? 'bg-green-600 text-white rounded-br-none' 
+                        ? 'bg-[#07bc0c] text-white rounded-br-none shadow-[#07bc0c]/10' 
                         : 'bg-white dark:bg-slate-800 dark:text-white rounded-bl-none border border-slate-200 dark:border-slate-700'
                     }`}>
                       {msg.text}
                     </div>
-                    <span className="text-[10px] text-slate-400 mt-1 mx-1">
+                    <span className="text-[10px] font-black text-slate-400 mt-2 mx-1 tracking-widest">
                       {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
                   </div>
                 </div>
               );
             })}
-            {activeGroup.messages.length === 0 && (
-              <div className="text-center py-12 text-slate-400">
-                <p>Welcome to {activeGroup.name}!</p>
-                <p className="text-sm">Be the first to say hello.</p>
-              </div>
-            )}
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex space-x-2">
+          <form onSubmit={handleSend} className="p-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex space-x-3">
             <input 
               type="text" 
               value={messageText}
               onChange={e => setMessageText(e.target.value)}
-              placeholder={`Message #${activeGroup.name}...`}
-              className="flex-1 bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 dark:text-white"
+              placeholder={`Message to ${activeGroup.name}...`}
+              className="flex-1 bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 focus:ring-4 focus:ring-green-500/10 dark:text-white font-bold"
             />
-            <button type="submit" disabled={!messageText.trim()} className="bg-green-600 text-white p-3 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              <Send size={20} />
+            <button type="submit" disabled={!messageText.trim()} className="bg-[#07bc0c] text-white p-4 rounded-2xl hover:bg-green-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xl active:scale-95">
+              <Send size={24} />
             </button>
           </form>
         </div>
 
         {/* Member Panel (Sidebar) */}
         {showMembersPanel && (
-          <div className="w-full md:w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="font-bold dark:text-white">Faculty Attendance</h3>
-              <p className="text-xs text-slate-500">{activeGroup.members.length} enrolled</p>
+          <div className="w-full md:w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+              <h3 className="font-black dark:text-white text-lg tracking-tight">Active Faculty</h3>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{activeGroup.members.length} Enrolled</p>
             </div>
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {activeGroup.members.map(member => (
-                <div key={member.userId} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group">
-                  <div className="flex items-center space-x-3">
+                <div key={member.userId} onClick={() => setSelectedMemberProfile(member)} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-[20px] group cursor-pointer transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                  <div className="flex items-center space-x-4">
                     <div className="relative">
-                      <img src={member.avatarUrl} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={member.avatarUrl} className="w-12 h-12 rounded-[18px] object-cover shadow-sm group-hover:scale-105 transition-transform" />
                       {member.role !== 'STUDENT' && (
-                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-0.5">
+                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-1 shadow-md border-2 border-slate-50 dark:border-slate-900">
                           {getRoleIcon(member.role)}
                         </div>
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold dark:text-white">{member.name}</p>
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">{getRoleLabel(member.role)}</p>
+                      <p className="text-sm font-black text-slate-800 dark:text-white leading-tight">{member.name}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">{getRoleLabel(member.role)}</p>
                     </div>
                   </div>
                   
-                  {/* Professor Controls */}
                   {isProfessor && member.userId !== user.id && (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-1">
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center space-x-2 transition-all">
                       {member.role === 'STUDENT' && (
                         <button 
-                          onClick={() => onManageMember(activeGroup.id, member.userId, 'PROMOTE')}
-                          title="Make Class Rep"
-                          className="p-1.5 text-blue-500 hover:bg-blue-50 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (canBeCourseRep(member.joinedAt)) {
+                              onManageMember(activeGroup.id, member.userId, 'PROMOTE');
+                            } else {
+                              alert("Candidate must be active on Unispace for at least 30 days.");
+                            }
+                          }}
+                          className={`p-2 rounded-xl transition-all ${canBeCourseRep(member.joinedAt) ? 'text-blue-500 bg-blue-50 hover:bg-blue-100' : 'text-slate-300 cursor-not-allowed'}`}
                         >
-                          <Shield size={16} />
+                          <Shield size={18} />
                         </button>
                       )}
                       <button 
-                        onClick={() => onManageMember(activeGroup.id, member.userId, 'DROPOUT')}
-                        title="Drop Out Student"
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                        onClick={(e) => { e.stopPropagation(); onManageMember(activeGroup.id, member.userId, 'DROPOUT'); }}
+                        className="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
                       >
-                        <LogOut size={16} />
+                        <LogOut size={18} />
                       </button>
                     </div>
                   )}
@@ -295,79 +277,149 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
     );
   }
 
+  // Member Profile Modal
+  function MemberProfileModal() {
+    if (!selectedMemberProfile) return null;
+    const seniority = Math.floor((Date.now() - new Date(selectedMemberProfile.joinedAt).getTime()) / (1000 * 60 * 60 * 24));
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white dark:bg-slate-800 rounded-[56px] shadow-4xl w-full max-w-xl overflow-hidden border border-slate-100 dark:border-slate-700 animate-in zoom-in duration-300">
+          <div className="h-40 bg-gradient-to-r from-green-500 to-emerald-600 relative">
+            <button onClick={() => setSelectedMemberProfile(null)} className="absolute top-6 right-6 bg-white/20 backdrop-blur p-2.5 rounded-full hover:bg-white/30 text-white transition-all"><X size={24}/></button>
+          </div>
+          <div className="px-12 pb-12">
+             <div className="relative flex flex-col items-center -mt-20 mb-8">
+                <img src={selectedMemberProfile.avatarUrl} className="w-40 h-40 rounded-full border-[8px] border-white dark:border-slate-800 shadow-4xl bg-white object-cover" />
+                <div className="mt-6 text-center">
+                   <h4 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{selectedMemberProfile.name}</h4>
+                   <div className="flex flex-col items-center mt-3">
+                      <p className="text-[#07bc0c] font-black uppercase tracking-widest text-xs flex items-center gap-2">
+                        {getRoleIcon(selectedMemberProfile.role)}
+                        {getRoleLabel(selectedMemberProfile.role)}
+                      </p>
+                      <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 flex items-center gap-2">
+                        <Briefcase size={16} className="text-slate-400"/> {selectedMemberProfile.profession || 'Verified Scholar'}
+                      </p>
+                      {selectedMemberProfile.workPlace && (
+                        <p className="text-slate-400 dark:text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
+                          <Building size={16}/> {selectedMemberProfile.workPlace}
+                        </p>
+                      )}
+                   </div>
+                </div>
+             </div>
+             
+             <div className="space-y-8 pt-8 border-t border-slate-100 dark:border-slate-700">
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-700/50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Active Since</p>
+                      <p className="text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tight">{seniority} Days</p>
+                   </div>
+                   <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-700/50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Trust Level</p>
+                      <p className="text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tight">Verified</p>
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">About</span>
+                      <p className="text-slate-600 dark:text-slate-300 font-medium italic leading-relaxed bg-slate-50 dark:bg-slate-950/50 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800">
+                        "{selectedMemberProfile.bio || 'Exploring the digital academic ecosystem on Unispace.'}"
+                      </p>
+                   </div>
+                   {selectedMemberProfile.websiteUrl && (
+                      <a href={selectedMemberProfile.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 px-6 py-4 bg-slate-50 dark:bg-slate-900 rounded-[24px] text-[#07bc0c] hover:underline font-black text-xs uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 transition-all active:scale-95">
+                         <Globe size={18} />
+                         <span className="truncate flex-1">{selectedMemberProfile.websiteUrl.replace(/^https?:\/\//, '')}</span>
+                         <ExternalLink size={14} />
+                      </a>
+                   )}
+                </div>
+                
+                <button onClick={() => setSelectedMemberProfile(null)} className="w-full py-6 bg-slate-900 dark:bg-black text-white rounded-[32px] font-black uppercase tracking-widest text-xs shadow-4xl active:scale-95 transition-all mt-4">Close Portfolio</button>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // -- RENDER: GALLERY / LIST VIEW --
   return (
-    <div className="space-y-6">
-       <div className="flex justify-between items-center bg-green-700 text-white p-8 rounded-2xl shadow-lg relative overflow-hidden">
-          <div className="relative z-10">
-             <h2 className="text-3xl font-bold mb-2">Campus Life</h2>
-             <p className="text-green-100 max-w-lg">Connect with Professors, Course Reps, and students in your department. Build your own academic community.</p>
+    <div className="space-y-12 animate-in fade-in duration-700">
+       <MemberProfileModal />
+
+       <div className="flex justify-between items-center bg-[#055a08] text-white p-16 rounded-[64px] shadow-3xl relative overflow-hidden">
+          <div className="relative z-10 space-y-6">
+             <h2 className="text-6xl font-black tracking-tighter leading-[0.9]">Faculties & <br/><span className="text-green-400">Communities.</span></h2>
+             <p className="text-green-100 max-w-xl text-xl font-bold opacity-80 leading-relaxed">Join specialized faculty networks to access departmental resources, find study partners, and moderate peer growth.</p>
           </div>
-          <div className="hidden md:block absolute right-0 bottom-0 opacity-10 transform translate-y-4 translate-x-4">
-             <Users size={180} />
+          <div className="hidden md:block absolute right-0 bottom-0 opacity-10 transform translate-y-16 translate-x-16">
+             <Users size={360} />
           </div>
        </div>
 
-       <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold dark:text-white">Popular Campuses</h3>
+       <div className="flex justify-between items-center px-4">
+          <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Scholarly Circles</h3>
           <button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 dark:shadow-none"
+            className="flex items-center space-x-3 bg-[#07bc0c] text-white px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest hover:bg-green-700 transition-all shadow-4xl shadow-green-100"
           >
-             <Plus size={18} />
-             <span>Build Campus</span>
+             <Plus size={20} />
+             <span>Initialize Circle</span>
           </button>
        </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-20">
           {visibleGroups.map(group => (
-             <div key={group.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow flex flex-col group-card relative overflow-hidden">
+             <div key={group.id} className="bg-white dark:bg-slate-800 rounded-[56px] border border-slate-100 dark:border-slate-700 p-10 hover:shadow-4xl transition-all flex flex-col group relative overflow-hidden hover:-translate-y-2">
                 {group.status === 'PENDING' && (
-                  <div className="absolute top-0 left-0 right-0 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300 text-xs font-bold text-center py-1">
-                    PENDING VERIFICATION
+                  <div className="absolute top-0 left-0 right-0 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300 text-[10px] font-black tracking-[0.4em] text-center py-2.5 uppercase">
+                    Verification Protocol
                   </div>
                 )}
-                <div className="flex justify-between items-start mb-4 mt-2">
-                   <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                      <img src={group.imageUrl} alt={group.name} className="w-full h-full object-cover" />
+                <div className="flex justify-between items-start mb-10 mt-2">
+                   <div className="w-20 h-20 rounded-[32px] bg-slate-100 dark:bg-slate-700 overflow-hidden shadow-xl border-4 border-white dark:border-slate-800">
+                      <img src={group.imageUrl} alt={group.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                    </div>
                    <div className="flex space-x-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleShare(group.id); }}
-                        className="text-slate-400 hover:text-green-600 transition-colors p-1"
-                        title="Copy Link"
+                        className="text-slate-400 hover:text-green-600 transition-all p-3 bg-slate-50 dark:bg-slate-700 rounded-[20px]"
                       >
-                        {copiedId === group.id ? <Check size={16} /> : <Copy size={16} />}
+                        {copiedId === group.id ? <Check size={20} /> : <Share2 size={20} />}
                       </button>
-                      {group.isPrivate && <Lock size={16} className="text-slate-400 mt-1" />}
                    </div>
                 </div>
-                <h4 className="font-bold text-lg mb-1 dark:text-white">{group.name}</h4>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 h-10 line-clamp-2">{group.description}</p>
-                <div className="flex items-center justify-between mt-auto">
-                   <span className="text-xs font-semibold text-slate-400">{group.members.length} Students</span>
+                <h4 className="font-black text-3xl mb-3 dark:text-white tracking-tighter leading-tight">{group.name}</h4>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-10 h-12 line-clamp-2 leading-relaxed">{group.description}</p>
+                <div className="flex items-center justify-between mt-auto pt-8 border-t border-slate-50 dark:border-slate-700">
+                   <div className="flex -space-x-4">
+                      {group.members.slice(0, 4).map((m, i) => (
+                         <img key={i} src={m.avatarUrl} className="w-10 h-10 rounded-full border-[3px] border-white dark:border-slate-800 object-cover shadow-sm" />
+                      ))}
+                      {group.members.length > 4 && (
+                        <div className="w-10 h-10 rounded-full border-[3px] border-white dark:border-slate-800 bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-black text-slate-400">+{group.members.length - 4}</div>
+                      )}
+                   </div>
                    
                    {group.isJoined ? (
                      <button 
                        onClick={() => setActiveGroupId(group.id)}
-                       className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center space-x-2"
+                       className="px-8 py-4 bg-slate-900 text-white rounded-[24px] text-xs font-black uppercase tracking-widest hover:bg-black transition-all flex items-center space-x-3 shadow-2xl"
                      >
-                       <span>Enter Campus</span>
+                       <span>Explore</span>
                        <ArrowLeft className="rotate-180" size={16} />
                      </button>
                    ) : (
                      <button 
                        onClick={() => handleJoinClick(group)}
                        disabled={group.status === 'PENDING'}
-                       className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${
-                         group.status === 'PENDING'
-                           ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                           : user.role === 'GUEST' 
-                             ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
-                             : 'bg-green-600 text-white hover:bg-green-700'
-                       }`}
+                       className={`px-10 py-4 text-xs font-black uppercase tracking-widest rounded-[24px] transition-all bg-[#07bc0c] text-white hover:bg-green-700 shadow-4xl shadow-green-100 ${group.status === 'PENDING' ? 'opacity-50 cursor-not-allowed' : ''}`}
                      >
-                       {user.role === 'GUEST' ? `Join (₦${GUEST_JOIN_FEE.toLocaleString()})` : 'Join (Free)'}
+                       Enroll
                      </button>
                    )}
                 </div>
@@ -375,110 +427,63 @@ export const Institutions: React.FC<InstitutionsProps> = ({ user, groups, onJoin
           ))}
        </div>
 
-       {/* Guest Payment Modal */}
-       {paymentGroup && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-               <div className="bg-green-600 p-6 text-white text-center">
-                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <CreditCard size={32} />
-                  </div>
-                  <h3 className="text-xl font-bold">Campus Access Fee</h3>
-               </div>
-               
-               <div className="p-6 space-y-6">
-                  <div className="text-center">
-                     <p className="text-slate-500 dark:text-slate-400 text-sm mb-1">You are about to join:</p>
-                     <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-4">{paymentGroup.name}</h4>
-                     
-                     <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600">
-                        <div className="flex justify-between items-center text-sm mb-2">
-                           <span className="text-slate-500 dark:text-slate-400">Entry Fee:</span>
-                           <span className="font-bold text-slate-800 dark:text-white">₦{GUEST_JOIN_FEE.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm border-t border-slate-200 dark:border-slate-600 pt-2">
-                           <span className="text-slate-500 dark:text-slate-400">Your Wallet:</span>
-                           <span className={`font-bold ${user.walletBalance >= GUEST_JOIN_FEE ? 'text-green-600' : 'text-red-500'}`}>
-                              ₦{user.walletBalance.toLocaleString()}
-                           </span>
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                     <button 
-                       onClick={confirmGuestPayment}
-                       className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-200 dark:shadow-none transition-colors"
-                     >
-                        Pay & Join
-                     </button>
-                     <button 
-                       onClick={() => setPaymentGroup(null)}
-                       className="w-full py-3 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-semibold transition-colors"
-                     >
-                        Cancel
-                     </button>
-                  </div>
-               </div>
-            </div>
-         </div>
-       )}
-
-       {/* Create Modal */}
+       {/* Create Circle Modal */}
        {isCreateModalOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-               <div className="bg-green-600 p-6 text-white">
-                  <h3 className="text-xl font-bold">Build a New Campus</h3>
-                  <p className="text-green-100 text-sm">Become a Professor and lead your community.</p>
+         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-[64px] shadow-4xl w-full max-w-2xl overflow-hidden border border-slate-100 dark:border-slate-700 animate-in slide-in-from-bottom-12 duration-500">
+               <div className="bg-[#055a08] p-16 text-white text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-10"></div>
+                  <div className="w-28 h-28 bg-white/20 rounded-[40px] flex items-center justify-center mx-auto mb-8 backdrop-blur-2xl relative z-10 border border-white/20">
+                     <Plus size={56} />
+                  </div>
+                  <h3 className="text-5xl font-black tracking-tighter relative z-10">Circle Initialization</h3>
+                  <p className="text-green-100 text-xl font-bold opacity-80 relative z-10 mt-4">Elevate your faculty with a specialized scholarly network.</p>
                </div>
                
-               <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 border-b border-yellow-100 dark:border-yellow-800">
-                  <div className="flex items-start space-x-3 mb-2">
-                     <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
-                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        A fee of <strong>₦{CREATE_CAMPUS_FEE.toLocaleString()}</strong> will be deducted. Your campus will be <strong>Pending Verification</strong> before going live.
+               <div className="bg-blue-50 dark:bg-blue-900/20 p-10 border-b border-blue-100 dark:border-blue-800">
+                  <div className="flex items-start space-x-6">
+                     <div className="p-4 bg-white dark:bg-slate-800 rounded-[24px] shadow-xl text-blue-600 flex-shrink-0">
+                        <AlertCircle size={32} />
+                     </div>
+                     <p className="text-sm text-blue-800 dark:text-blue-200 font-bold leading-relaxed">
+                        Circle infrastructure is provided at zero cost. Unispace moderation manually reviews all circles for academic integrity and safety before final distillation into the global network.
                      </p>
                   </div>
-                  <div className="flex justify-between text-xs border-t border-yellow-200 dark:border-yellow-800 pt-2 mt-2">
-                     <span className="text-yellow-800 dark:text-yellow-200">Your Balance:</span>
-                     <span className={`font-bold ${user.walletBalance < CREATE_CAMPUS_FEE ? "text-red-500" : "text-green-700 dark:text-green-400"}`}>
-                        ₦{user.walletBalance.toLocaleString()}
-                     </span>
-                  </div>
                </div>
 
-               <form onSubmit={handleCreate} className="p-6 space-y-4">
-                  <div>
-                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Campus Name</label>
-                     <input required type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Computer Science 300L" className="w-full mt-1 p-2 rounded-lg border border-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+               <form onSubmit={handleCreate} className="p-12 space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 ml-2">Designation</label>
+                       <input required type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Mechanical 400L" className="w-full p-6 rounded-[28px] border-2 border-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white font-bold outline-none focus:border-[#07bc0c] transition-all text-lg shadow-sm" />
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 ml-2">Cover Visualization</label>
+                       <div className="flex gap-6 items-center">
+                          <div className="w-16 h-16 rounded-[24px] bg-slate-100 dark:bg-slate-700 overflow-hidden flex-shrink-0 shadow-inner">
+                             <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                          <label className="flex-1 cursor-pointer">
+                             <span className="inline-block px-6 py-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-[20px] text-xs font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-600 transition-all text-center w-full shadow-sm">
+                                <Upload size={16} className="inline mr-2" />
+                                Image Source
+                             </span>
+                             <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
+                          </label>
+                       </div>
+                    </div>
                   </div>
                   <div>
-                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-                     <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What is this group for? No harmful/occult content." className="w-full mt-1 p-2 rounded-lg border border-slate-300 dark:bg-slate-700 dark:border-slate-600 dark:text-white" rows={3} />
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 ml-2">Manifesto & Objectives</label>
+                     <textarea required value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Define the scholarly purpose of this circle..." className="w-full p-8 rounded-[40px] border-2 border-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white font-bold outline-none focus:border-[#07bc0c] transition-all text-lg resize-none min-h-[140px] shadow-sm" />
                   </div>
-                  <div>
-                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Cover Image</label>
-                     <div className="flex gap-4 items-center">
-                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-lg overflow-hidden flex-shrink-0">
-                           <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                        </div>
-                        <label className="flex-1 cursor-pointer">
-                           <span className="inline-block px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
-                              <Upload size={16} className="inline mr-2" />
-                              Upload Image
-                           </span>
-                           <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
-                        </label>
-                     </div>
-                  </div>
-                  <div className="flex space-x-3 mt-6">
-                     <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
+                  <div className="flex flex-col sm:flex-row gap-6 pt-4">
+                     <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-7 text-slate-500 font-black uppercase tracking-widest text-xs hover:bg-slate-100 rounded-[28px] transition-all">Abort Process</button>
                      <button 
                        type="submit" 
-                       className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md flex justify-center items-center space-x-2"
+                       className="flex-[2] py-7 bg-[#07bc0c] text-white font-black uppercase tracking-widest text-xs rounded-[28px] hover:bg-green-700 shadow-4xl active:scale-[0.98] transition-all"
                      >
-                       <span>Pay & Build</span>
+                       Initialize Scholarly Node
                      </button>
                   </div>
                </form>
